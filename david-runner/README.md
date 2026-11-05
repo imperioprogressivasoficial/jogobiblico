@@ -14,6 +14,17 @@ npm run dev        # abre em http://localhost:5173 (também acessível pelo celu
 Para gerar a versão de produção: `npm run build` (pasta `dist/`).
 Para gerar **um único arquivo HTML** que pode ser enviado ou hospedado em qualquer lugar: `npm run build:single` (gera `dist-single/index.html`).
 
+## App para celular
+
+O jogo é um app mobile, empacotado com [Capacitor](https://capacitorjs.com) a partir do mesmo código:
+
+- **Android:** o projeto nativo está em `android/`. Para gerar o APK de teste: `npm run android:apk`. Ele fica em `android/app/build/outputs/apk/debug/app-debug.apk` e pode ser instalado direto no celular. Para abrir no Android Studio: `npm run android:open`. É preciso ter o Android SDK instalado.
+- **iOS:** o projeto nativo está em `ios/`. Abra no Xcode (num Mac) com `npm run ios:open`.
+- **No app nativo:** tela cheia sem barras, orientação retrato travada, tela sempre ligada durante a corrida, vibração nativa ao colidir. O botão "voltar" do Android pausa a corrida e volta entre as telas. Tudo funciona sem internet, inclusive as fontes.
+- **Pelo navegador (PWA):** publicado num site, o jogo pode ser instalado pelo menu "Adicionar à tela inicial". Abre em tela cheia, em retrato, e funciona offline depois da primeira visita.
+- **Ícones e telas de abertura:** ficam em `resources/`. Para gerar de novo: `npm run icons:native`.
+- **Publicar nas lojas:** a Google Play precisa de um AAB assinado com a chave da empresa, gerado pelo Android Studio em *Build → Generate Signed Bundle*. Guarde essa chave em local seguro, porque todas as atualizações futuras precisam dela. A App Store exige conta Apple Developer e build pelo Xcode. O identificador do app é `br.com.imperioprogressivas.davidrunner`.
+
 ### Controles
 
 | Ação | Celular | Computador |

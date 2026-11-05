@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { getMap, type MapDef } from '../data/maps';
+import { vibrate } from '../platform/native';
 import { audio } from './AudioManager';
 import { CameraController } from './CameraController';
 import { CollectibleManager, type PickupEvent } from './CollectibleManager';
@@ -63,6 +64,8 @@ export class GameEngine {
   distance = 0;
   speed = 0;
   autopilot = false;
+  /** Vibrar o aparelho ao colidir (configurações). */
+  vibration = true;
   /** Modo de teste: torna o jogador invencível. */
   godMode = false;
 
@@ -472,13 +475,7 @@ export class GameEngine {
     this.setMode('crashed');
     audio.play('crash');
     audio.stopMusic(false);
-    if (navigator.vibrate) {
-      try {
-        navigator.vibrate(180);
-      } catch {
-        /* ignora */
-      }
-    }
+    if (this.vibration) vibrate(180);
   }
 
   private handlePickup(e: PickupEvent): void {

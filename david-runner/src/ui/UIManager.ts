@@ -62,6 +62,21 @@ class UIManagerImpl {
     return new Promise((r) => this.engineWaiters.push(r));
   }
 
+  /**
+   * Botão "voltar" do Android: pausa a corrida, fecha telas e volta ao menu.
+   * Retorna false no menu principal (o app vai para segundo plano).
+   */
+  handleBack(): boolean {
+    const e = this.engine;
+    if (this.screen === 'game') {
+      if (e && e.mode === 'playing') e.pause();
+      return true;
+    }
+    if (this.screen === 'menu' || this.screen === 'splash') return false;
+    this.back();
+    return true;
+  }
+
   /** Inicia uma corrida com as escolhas atuais do jogador. */
   startRun(): void {
     const e = this.engine;
@@ -110,6 +125,7 @@ export function applySettings(): void {
   const q = s.quality === 'auto' ? 'alta' : s.quality;
   if (e.getQuality() !== q && !(s.quality === 'auto' && e.getQuality() !== 'alta')) e.setQuality(q);
   e.setSwipeThreshold(SENSITIVITY_PX[s.sensitivity]);
+  e.vibration = s.vibration;
 }
 
 export const fmt = (n: number) => Math.floor(n).toLocaleString('pt-BR');
