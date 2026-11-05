@@ -38,7 +38,8 @@
           "imageWidth": 220
         }
       ],
-      "expo-screen-orientation"
+      "expo-screen-orientation",
+      "expo-audio"
     ],
     "extra": {
       "eas": {

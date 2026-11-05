@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { audio } from '../../game/AudioManager';
 import { CHARACTERS } from '../../data/characters';
-import { CHARIOT, chariotDuration } from '../../data/chariot';
+import { MAX_CHARGES, POWERS, powerDuration } from '../../data/powers';
 import { UPGRADES } from '../../data/progression';
 import { progression } from '../../state/ProgressionManager';
 import { Btn, CoinIcon, Progress, RelicIcon, TopBar } from '../components/common';
@@ -11,7 +11,8 @@ type Tab = 'herois' | 'trajes' | 'melhorias' | 'poderes';
 
 export function ShopScreen() {
   useProgress();
-  const [tab, setTab] = useState<Tab>('herois');
+  const [tab, setTab] = useState<Tab>(UIManager.shopTab);
+  UIManager.shopTab = 'herois';
   const d = progression.data;
 
   return (
@@ -176,76 +177,119 @@ export function ShopScreen() {
   );
 }
 
-/** Aba "Poderes": cargas da Carruagem de Fogo e melhoria de duração. */
+/** Aba "Poderes": os seis poderes bíblicos — equipar, desbloquear, comprar cargas e melhorar a duração. */
 function PowersTab() {
   const d = progression.data;
-  const lvl = d.chariot.level;
-  const cost = progression.chariotUpgradeCost();
-  const full = d.chariot.charges >= CHARIOT.maxCharges;
   return (
     <div className="shop-list">
-      <div className="chariot-card">
-        <div className="chariot-card-art" aria-hidden="true">
-          🐎🔥🐎
-        </div>
-        <div>
-          <strong>Carruagem de Fogo</strong>
-          <p>
-            Toque <b>duas vezes</b> na tela durante a corrida (ou aperte <b>E</b>): você corre mais rápido, fica invencível e
-            atravessa tudo pelo caminho!
-          </p>
-          <small>“Eis que um carro de fogo, com cavalos de fogo...” — {CHARIOT.reference}</small>
-        </div>
-      </div>
-      <div className="shop-item">
-        <div className="shop-avatar emoji">🔥</div>
-        <div className="shop-info">
-          <strong>Carga da Carruagem</strong>
-          <small>
-            Você tem <b data-testid="shop-chariot-charges">{d.chariot.charges}</b> {d.chariot.charges === 1 ? 'carga' : 'cargas'}. Ganhe +1
-            a cada missão diária resgatada.
-          </small>
-        </div>
-        <Btn
-          variant="gold"
-          size="sm"
-          sfx={null}
-          disabled={d.coins < CHARIOT.chargeCost || full}
-          testId="buy-chariot-charge"
-          onClick={() => audio.play(progression.buyChariotCharge() ? 'buy' : 'error')}
-        >
-          <CoinIcon size={16} /> {fmt(CHARIOT.chargeCost)}
-        </Btn>
-      </div>
-      <div className="shop-item">
-        <div className="shop-avatar emoji">⏱️</div>
-        <div className="shop-info">
-          <strong>Duração da Carruagem</strong>
-          <small>
-            Duração: {chariotDuration(lvl).toLocaleString('pt-BR')} s
-            {cost !== null && <> → {chariotDuration(lvl + 1).toLocaleString('pt-BR')} s</>}
-          </small>
-          <div className="pips">
-            {CHARIOT.upgradeCosts.map((_, i) => (
-              <span key={i} className={`pip ${i < lvl ? 'on' : ''}`} />
-            ))}
+      <p className="muted center">
+        Equipe <b>um poder</b> e use na corrida com <b>dois toques</b> na tela (ou a tecla E). Ganhe +1 carga do poder equipado a cada
+        missão diária resgatada.
+      </p>
+      {POWERS.map((pw) => {
+        const st = progression.powerState(pw.id);
+        const status = progression.powerUnlockStatus(pw.id);
+        const equipped = d.equippedPower === pw.id;
+        const cost = progression.powerUpgradeCost(pw.id);
+        const timed = pw.kind === 'timed';
+        return (
+          <div key={pw.id} className={`power-card ${equipped ? 'equipped' : ''} ${status.unlocked ? '' : 'locked'}`} style={{ borderColor: pw.color }} data-testid={`power-${pw.id}`}>
+            <div className="power-card-head">
+              <div className="power-card-icon" style={{ background: pw.color }}>
+                {pw.icon}
+              </div>
+              <div className="power-card-title">
+                <strong>{pw.name}</strong>
+                <small>{pw.reference}</small>
+              </div>
+              {status.unlocked ? (
+                equipped ? (
+                  <span className="owned" data-testid={`equipped-${pw.id}`}>
+                    ✔ Equipado
+                  </span>
+                ) : (
+                  <Btn variant="green" size="sm" testId={`equip-${pw.id}`} onClick={() => progression.equipPower(pw.id)}>
+                    Equipar
+                  </Btn>
+                )
+              ) : (
+                <span className="power-lock">🔒</span>
+              )}
+            </div>
+            <p className="power-card-desc">{pw.description}</p>
+            <small className="power-card-quote">“{pw.quote}” — {pw.reference}</small>
+            {status.unlocked ? (
+              <div className="power-card-actions">
+                <div className="power-stat">
+                  <span>
+                    {pw.icon} <b data-testid={`charges-${pw.id}`}>{st.charges}</b> {st.charges === 1 ? pw.chargeName[0] : pw.chargeName[1]}
+                  </span>
+                  <Btn
+                    variant="gold"
+                    size="sm"
+                    sfx={null}
+                    disabled={d.coins < pw.chargeCost || st.charges >= MAX_CHARGES}
+                    testId={`buy-charge-${pw.id}`}
+                    onClick={() => audio.play(progression.buyPowerCharge(pw.id) ? 'buy' : 'error')}
+                  >
+                    +1 · <CoinIcon size={16} /> {fmt(pw.chargeCost)}
+                  </Btn>
+                </div>
+                {timed && (
+                  <div className="power-stat">
+                    <span>
+                      ⏱️ {powerDuration(pw, st.level).toLocaleString('pt-BR')} s
+                      {cost !== null && <> → {powerDuration(pw, st.level + 1).toLocaleString('pt-BR')} s</>}
+                      <span className="pips">
+                        {pw.upgradeCosts.map((_, i) => (
+                          <span key={i} className={`pip ${i < st.level ? 'on' : ''}`} />
+                        ))}
+                      </span>
+                    </span>
+                    {cost === null ? (
+                      <span className="owned">Máximo</span>
+                    ) : (
+                      <Btn
+                        variant="gold"
+                        size="sm"
+                        sfx={null}
+                        disabled={d.coins < cost}
+                        testId={`upgrade-${pw.id}`}
+                        onClick={() => audio.play(progression.buyPowerUpgrade(pw.id) ? 'buy' : 'error')}
+                      >
+                        <CoinIcon size={16} /> {fmt(cost)}
+                      </Btn>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="power-card-actions">
+                <small className="muted">{status.label}</small>
+                <Btn
+                  variant="gold"
+                  size="sm"
+                  sfx={null}
+                  disabled={!status.byStory && !status.canBuy}
+                  testId={`unlock-${pw.id}`}
+                  onClick={() => {
+                    const ok = progression.unlockPower(pw.id, !status.byStory);
+                    audio.play(ok ? 'buy' : 'error');
+                  }}
+                >
+                  {status.byStory ? (
+                    'Desbloquear'
+                  ) : (
+                    <>
+                      Desbloquear · <CoinIcon size={16} /> {pw.unlock.type === 'story' ? fmt(pw.unlock.coins) : 0}
+                    </>
+                  )}
+                </Btn>
+              </div>
+            )}
           </div>
-        </div>
-        {cost === null ? (
-          <span className="owned">Máximo</span>
-        ) : (
-          <Btn
-            variant="gold"
-            size="sm"
-            sfx={null}
-            disabled={d.coins < cost}
-            testId="upgrade-chariot"
-            onClick={() => audio.play(progression.buyChariotUpgrade() ? 'buy' : 'error')}
-          >
-            <CoinIcon size={16} /> {fmt(cost)}
-          </Btn>
-        )}
-      </div>
+        );
+      })}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { getMap, type MapDef } from '../data/maps';
 import { vibrate } from '../platform/native';
 import { CHARIOT } from '../data/chariot';
+import { getPower } from '../data/powers';
 import { audio } from './AudioManager';
 import { BoostEffect } from './BoostEffect';
 import { CameraController } from './CameraController';
@@ -10,9 +11,10 @@ import { CollectibleManager, type PickupEvent } from './CollectibleManager';
 import { DESPAWN_BEHIND, LANE_X, SPAWN_AHEAD, scaledSpeedCurve, speedForDistance } from './config';
 import { EnvironmentManager } from './EnvironmentManager';
 import { InputManager, type GameAction } from './InputManager';
-import { ObstacleManager } from './ObstacleManager';
+import { ObstacleManager, type ActiveObstacle } from './ObstacleManager';
 import { ParticleSystem } from './ParticleSystem';
 import { PlayerController } from './PlayerController';
+import { PostFX, colorPipelineReady } from './PostFX';
 import { Rng } from './rng';
 import { ScoreManager, type RunStats } from './ScoreManager';
 import { TrackGenerator } from './TrackGenerator';
@@ -29,8 +31,8 @@ export interface RunOptions {
   /** Duração (s) de cada power-up, conforme as melhorias compradas. */
   durations: Record<PowerType, number>;
   seed?: number;
-  /** Carruagem de Fogo: cargas disponíveis e duração (s). Sem isso, 0 cargas. */
-  chariot?: { charges: number; duration: number };
+  /** Poder equipado (id em data/powers.ts), cargas disponíveis e duração (s). Sem isso, Carruagem com 0 cargas. */
+  chariot?: { id?: string; charges: number; duration: number };
   /** Escala de velocidade (modo Criança < 1). Padrão 1 = Normal. */
   speedScale?: number;
   /** Escala da distância de aceleração (> 1 = acelera mais devagar). Padrão 1. */
@@ -78,6 +80,8 @@ export class GameEngine {
   readonly input: InputManager;
   readonly chariot = new ChariotPower();
   readonly boostFx: BoostEffect;
+  /** Pós-processamento (bloom, gradação de cor, vinheta, FXAA) por qualidade. */
+  readonly post: PostFX;
   mode: EngineMode = 'menu';
   distance = 0;
   speed = 0;
@@ -120,6 +124,13 @@ export class GameEngine {
   private menuTime = 0;
   private resizeObs: ResizeObserver;
   private disposed = false;
+  /** Pedra da Funda em voo. */
+  private stone: THREE.Mesh;
+  private stoneT = 0;
+  private stoneTarget: ActiveObstacle | null = null;
+  private stoneMiss = 0;
+  /** Obstáculos afastados pelo Cajado (animação de abertura). */
+  private parted: { o: ActiveObstacle; dir: number }[] = [];
   private hud: HudData = { distance: 0, score: 0, coins: 0, multiplier: 1, speed: 0, powers: [], boost: { remaining: 0, total: 1, charges: 0 } };
   /** Curva de velocidade da corrida atual (Normal ou Criança). */
   private speedAt: (d: number) => number = speedForDistance;
@@ -127,15 +138,27 @@ export class GameEngine {
   constructor(private canvas: HTMLCanvasElement, inputTarget: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    // Curva própria (AgX "Punchy" + gradação quente), ver PostFX.ts.
+    this.renderer.toneMapping = colorPipelineReady() ? THREE.CustomToneMapping : THREE.AgXToneMapping;
+    this.renderer.toneMappingExposure = 1;
     this.renderer.shadowMap.enabled = true;
+    // No three r187 o PCFShadowMap já é o filtro suave (disco de Vogel; suavidade = shadow.radius).
+    // O antigo PCFSoftShadowMap foi removido e cairia neste mesmo modo.
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
+    // As estatísticas somam todos os passes do quadro (sombra, cena e pós).
+    this.renderer.info.autoReset = false;
 
     this.env = new EnvironmentManager(this.scene);
+    this.env.atmosphere.setRenderer(this.renderer);
+    this.post = new PostFX(this.renderer, this.scene, this.cameraCtl.camera);
     this.obstacles = new ObstacleManager(this.scene);
     this.particles = new ParticleSystem(this.scene);
     this.collectibles = new CollectibleManager(this.scene, this.particles);
     this.player = new PlayerController(this.scene, 'davi', 'padrao');
     this.boostFx = new BoostEffect(this.scene);
+    this.stone = new THREE.Mesh(new THREE.DodecahedronGeometry(0.16, 0), new THREE.MeshStandardMaterial({ color: 0x9aa3ad, roughness: 0.9 }));
+    this.stone.visible = false;
+    this.scene.add(this.stone);
     this.player.onEvent = (e) => {
       if (this.mode !== 'playing') return;
       const r = this.score.run;
@@ -155,6 +178,7 @@ export class GameEngine {
       }
     };
     this.input = new InputManager(inputTarget, (a) => this.handleAction(a));
+    for (const ev of ['pointerup', 'touchend', 'keydown'] as const) inputTarget.addEventListener(ev, () => audio.unlock(), { passive: true });
     this.input.enabled = false;
 
     this.setMap('jerusalem');
@@ -217,6 +241,9 @@ export class GameEngine {
     const shadows = q !== 'baixa';
     this.env.setShadows(shadows);
     this.player.setShadowsEnabled(shadows);
+    this.env.atmosphere.setShadowQuality(q === 'alta' ? 2048 : 1024, q === 'alta' ? 2.5 : 1.6);
+    this.env.atmosphere.setCloudDetail(q === 'alta' ? 16 : q === 'media' ? 12 : 8);
+    this.post.setQuality(q);
     this.resize();
   }
 
@@ -234,6 +261,7 @@ export class GameEngine {
     const h = Math.max(1, el.clientHeight);
     this.renderer.setSize(w, h, false);
     this.cameraCtl.resize(w, h);
+    this.post?.setSize(w, h);
   };
 
   private onVisibility = () => {
@@ -264,7 +292,10 @@ export class GameEngine {
 
   startRun(opts: RunOptions): void {
     this.stopChariot();
-    this.chariot.configure(opts.chariot?.charges ?? 0, opts.chariot?.duration ?? CHARIOT.baseDuration);
+    const powerDef = getPower(opts.chariot?.id ?? 'chariot');
+    this.chariot.configure(opts.chariot?.charges ?? 0, opts.chariot?.duration ?? CHARIOT.baseDuration, powerDef);
+    this.boostFx.setStyle(powerDef.glow, powerDef.id === 'chariot');
+    this.parted.length = 0;
     this.speedAt = scaledSpeedCurve(opts.speedScale ?? 1, opts.rampScale ?? 1);
     this.setMap(opts.mapId);
     this.setCharacter(opts.characterId, opts.skinId);
@@ -345,8 +376,8 @@ export class GameEngine {
     else if (a === 'boost') this.activateBoost();
   }
 
-  // ------------------------------------------------------------- Carruagem de Fogo
-  /** Chama a Carruagem de Fogo (toque duplo, tecla E ou botão do HUD). */
+  // ------------------------------------------------------------- Poderes (Carruagem, Funda, Cajado, Manto, Harpa, Sansão)
+  /** Usa o poder equipado (toque duplo, tecla E ou botão do HUD). */
   activateBoost(): boolean {
     if (this.mode !== 'playing') return false;
     if (!this.chariot.activate()) {
@@ -354,37 +385,120 @@ export class GameEngine {
       return false;
     }
     this.score.run.boosts++;
-    this.boostFx.pulse();
-    this.cameraCtl.addShake(0.35);
-    audio.play('chariot');
+    const fx = this.chariot.def.effects;
+    if (fx.stone) {
+      this.throwStone();
+    } else {
+      this.boostFx.pulse();
+      this.cameraCtl.addShake(this.chariot.def.id === 'chariot' ? 0.35 : 0.2);
+      audio.play(this.chariot.def.id === 'chariot' ? 'chariot' : 'powerup');
+    }
     this.emit('boost');
     return true;
   }
 
+  /** Funda de Davi: a pedra destrói o primeiro obstáculo à frente na pista do herói. */
+  private throwStone(): void {
+    const p = this.player;
+    let best: ActiveObstacle | null = null;
+    for (const o of this.obstacles.active) {
+      if (o.hit) continue;
+      const s = o.spec;
+      if (s.d + s.length < this.distance - 0.5 || s.d > this.distance + 34) continue;
+      if (Math.abs(o.x - p.x) > o.box.hw + 0.6) continue;
+      if (!best || s.d < best.spec.d) best = o;
+    }
+    this.stone.visible = true;
+    this.stone.position.set(p.x, p.y + 1.1, -0.3);
+    this.stoneT = 0;
+    this.stoneTarget = best;
+    audio.play('jump');
+    if (!best) this.stoneMiss = this.distance + 34;
+  }
+
+  private updateStone(dt: number): void {
+    if (!this.stone.visible) return;
+    this.stoneT += dt;
+    const t = Math.min(1, this.stoneT / 0.28);
+    const o = this.stoneTarget;
+    const zTarget = o ? o.mesh.position.z : -(this.stoneMiss - this.distance);
+    this.stone.position.z = -0.3 + (zTarget + 0.3) * t;
+    this.stone.position.y = this.player.y + 1.1 + Math.sin(t * Math.PI) * 1.2 - t * 0.5;
+    this.stone.position.x += ((o ? o.x : this.player.x) - this.stone.position.x) * Math.min(1, dt * 12);
+    this.stone.rotation.x += dt * 20;
+    if (t >= 1) {
+      this.stone.visible = false;
+      if (o && !o.hit) this.destroyObstacle(o, 30);
+    }
+  }
+
+  /** Obstáculo destruído por um poder: arremessado em pedaços, com pontos. */
+  private destroyObstacle(o: ActiveObstacle, points: number): void {
+    o.hit = true;
+    const z = o.mesh.position.z;
+    this.boostFx.fling(o.mesh, o.mesh.position.x, z, this.player.x);
+    o.mesh.visible = false;
+    this.particles.burst(o.mesh.position.x, 0.9, z, this.chariot.def.color, 16, 6, 3);
+    this.particles.burst(o.mesh.position.x, 0.6, z, '#ffffff', 8, 4, 2);
+    this.cameraCtl.addShake(0.22);
+    this.score.run.smashed++;
+    this.score.addBonus(points);
+    audio.play('smash');
+  }
+
+  /** Cajado de Moisés: os obstáculos à frente na pista do herói se afastam para os lados. */
+  private partObstacles(dt: number): void {
+    const p = this.player;
+    if (this.chariot.active) {
+      for (const o of this.obstacles.active) {
+        if (o.hit || o.spec.fullWidth) continue;
+        const s = o.spec;
+        if (s.d + s.length < this.distance - 1 || s.d > this.distance + 28) continue;
+        if (Math.abs(o.x - p.x) > o.box.hw + 0.7) continue;
+        o.hit = true;
+        this.parted.push({ o, dir: o.x <= p.x ? -1 : 1 });
+        this.particles.burst(o.x, 0.5, o.mesh.position.z, this.chariot.def.color, 10, 4, 2);
+      }
+    }
+    for (let i = this.parted.length - 1; i >= 0; i--) {
+      const { o, dir } = this.parted[i];
+      if (!o.mesh.parent || o.mesh.position.z > 12) {
+        this.parted.splice(i, 1);
+        continue;
+      }
+      o.mesh.position.x += (dir * 6.2 - o.mesh.position.x) * Math.min(1, dt * 7);
+      o.mesh.rotation.z = -dir * Math.min(0.25, Math.abs(o.mesh.position.x) * 0.05);
+    }
+  }
+
   private stopChariot(): void {
     this.chariot.stop();
+    this.stone.visible = false;
+    this.parted.length = 0;
     this.boostFx.reset();
     audio.setBoostLoop(false);
   }
 
-  /** Durante a carruagem, os obstáculos no caminho são arremessados em vez de bater. */
+  /** Carruagem / Sansão: os obstáculos no caminho são arremessados em vez de bater. */
   private smashObstacles(): void {
     const p = this.player;
     const box = { x: p.x, y: 0, height: 3.4, hw: 0.8, hd: 0.9 };
+    const points = this.chariot.def.id === 'sansao' ? 50 : 20;
     for (let k = 0; k < 6; k++) {
       const hit = this.obstacles.checkCollision(box, this.distance, false);
       if (!hit) return;
-      const o = hit.obstacle;
-      o.hit = true;
-      const z = o.mesh.position.z;
-      this.boostFx.fling(o.mesh, o.mesh.position.x, z, p.x);
-      o.mesh.visible = false;
-      this.particles.burst(o.mesh.position.x, 0.9, z, '#ffb02e', 16, 6, 3);
-      this.particles.burst(o.mesh.position.x, 0.6, z, '#ff5a1f', 8, 4, 2);
-      this.cameraCtl.addShake(0.22);
-      this.score.run.smashed++;
-      this.score.addBonus(20);
-      audio.play('smash');
+      this.destroyObstacle(hit.obstacle, points);
+    }
+  }
+
+  /** Manto de Elias: o herói atravessa os obstáculos sem destruí-los. */
+  private passThrough(): void {
+    const box = this.player.getBox();
+    for (let k = 0; k < 6; k++) {
+      const hit = this.obstacles.checkCollision(box, this.distance, false);
+      if (!hit) return;
+      hit.obstacle.hit = true;
+      this.particles.burst(this.player.x, 1, 0, this.chariot.def.color, 8, 3, 1.5);
     }
   }
 
@@ -425,9 +539,12 @@ export class GameEngine {
       this.env.update(0, dt);
       this.particles.update(dt, 0);
     }
-    this.cameraCtl.update(dt, this.player.x, this.player.y);
+    const camSpeed = this.mode === 'playing' || this.mode === 'crashed' ? this.speed : 0;
+    this.cameraCtl.update(dt, this.player.x, this.player.y, camSpeed);
     this.boostFx.applyCamera(this.cameraCtl.camera, dt);
-    this.renderer.render(this.scene, this.cameraCtl.camera);
+    this.env.atmosphere.setHeroFill(this.mode === 'menu' || this.mode === 'showcase' ? 1 : 0, dt);
+    this.renderer.info.reset();
+    this.post.render(dt);
 
     if (this.frameListeners.length && (this.mode === 'playing' || this.mode === 'paused' || this.mode === 'crashed')) {
       this.updateHud();
@@ -475,10 +592,10 @@ export class GameEngine {
     // Carruagem de Fogo: tempo, velocidade extra e proteção final
     if (this.chariot.update(dt) === 'ended') {
       p.invulnerable = Math.max(p.invulnerable, CHARIOT.tailProtection);
-      audio.play('chariotEnd');
+      audio.play(this.chariot.def.id === 'chariot' ? 'chariotEnd' : 'uiBack');
       this.emit('boostEnd');
     }
-    audio.setBoostLoop(this.chariot.active);
+    audio.setBoostLoop(this.chariot.active && this.chariot.def.id === 'chariot');
     const target = this.speedAt(this.distance) * this.chariot.speedMul;
     const ramp = Math.min(1, this.runTime / 1.2);
     this.speed += (target * (0.35 + 0.65 * ramp) - this.speed) * Math.min(1, dt * 4);
@@ -508,19 +625,22 @@ export class GameEngine {
         }
       }
     }
-    this.score.doubleActive = this.powers.double.remaining > 0;
+    this.score.doubleActive = this.powers.double.remaining > 0 || (this.chariot.active && this.chariot.def.effects.doubleCoins);
 
     // coleta
     const box = p.getBox();
     this.pickups.length = 0;
-    const magnet = this.powers.magnet.remaining > 0 || this.chariot.active;
+    const magnet = this.powers.magnet.remaining > 0 || (this.chariot.active && this.chariot.def.effects.magnet);
     this.collectibles.update(this.distance, dt, p.x, p.y, box.height, magnet, this.pickups);
     for (const e of this.pickups) this.handlePickup(e);
 
     // colisão
     if (this.sideCooldown > 0) this.sideCooldown -= dt;
+    this.updateStone(dt);
+    if (this.chariot.def.effects.part) this.partObstacles(dt);
     if (this.chariot.shielding) {
-      this.smashObstacles();
+      if (this.chariot.def.effects.smash) this.smashObstacles();
+      else this.passThrough();
     } else if (p.invulnerable <= 0 && !this.godMode) {
       const hit = this.obstacles.checkCollision(box, this.distance, p.laneMoving);
       if (hit) {
@@ -572,7 +692,7 @@ export class GameEngine {
     const r = this.score.run;
     switch (e.type) {
       case 'coin':
-        r.coins++;
+        r.coins += this.chariot.active && this.chariot.def.effects.doubleCoins ? 2 : 1;
         audio.play('coin');
         break;
       case 'scroll':
@@ -629,6 +749,8 @@ export class GameEngine {
       this.step(dt);
       t += dt;
     }
+    // o tempo também passou para a câmera (transições concluídas)
+    this.cameraCtl.advance(t, this.player.x, this.player.y);
     return t;
   }
 
@@ -673,6 +795,7 @@ export class GameEngine {
     this.resizeObs.disconnect();
     this.input.dispose();
     document.removeEventListener('visibilitychange', this.onVisibility);
+    this.post.dispose();
     this.renderer.dispose();
   }
 }

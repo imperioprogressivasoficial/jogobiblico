@@ -24,7 +24,10 @@ const isTouch = typeof window !== 'undefined' && window.matchMedia?.('(pointer: 
 const HINTS = isTouch
   ? ['Deslize ⟵ ⟶ para trocar de pista', 'Deslize para cima ↑ para pular', 'Deslize para baixo ↓ para deslizar', 'Pegue 📜 pergaminhos para revelar histórias da Bíblia!']
   : ['Use ← → ou A / D para trocar de pista', '↑, W ou Espaço para pular', '↓ ou S para deslizar', 'Pegue 📜 pergaminhos para revelar histórias da Bíblia!'];
-const CHARIOT_HINT = isTouch ? '🔥 Toque duas vezes na tela para chamar a Carruagem de Fogo!' : '🔥 Aperte E (ou toque duas vezes) para chamar a Carruagem de Fogo!';
+const powerHint = () => {
+  const p = progression.equippedPower;
+  return isTouch ? `${p.icon} Toque duas vezes na tela para usar: ${p.name}!` : `${p.icon} Aperte E (ou toque duas vezes) para usar: ${p.name}!`;
+};
 
 export function GameScreen() {
   useProgress();
@@ -103,12 +106,12 @@ export function GameScreen() {
       engine.on('shieldBreak', () => showBanner('🛡️ O escudo te protegeu!')),
       engine.on('boost', () => {
         progression.useChariotCharge();
-        showBanner('🔥 Carruagem de Fogo!');
+        showBanner(`${engine.chariot.def.icon} ${engine.chariot.def.name}!`);
         setBoost({ remaining: engine.chariot.remaining, total: engine.chariot.duration, charges: engine.chariot.charges });
       }),
       engine.on('boostDenied', () => {
         audio.play('error');
-        showBanner('🔥 Sem cargas! Ganhe nas missões ou na loja.');
+        showBanner(`${engine.chariot.def.icon} Sem ${engine.chariot.def.chargeName[1]}! Ganhe nas missões ou na loja.`);
       }),
       engine.on('mode', (m) => {
         if (m === 'paused') setPhase((p) => (p === 'playing' ? 'paused' : p));
@@ -125,7 +128,7 @@ export function GameScreen() {
     const timers: number[] = [];
     HINTS.forEach((h, i) => timers.push(window.setTimeout(() => setHint(h), 400 + i * 2600)));
     // por último, a Carruagem de Fogo (fica um pouco mais na tela)
-    timers.push(window.setTimeout(() => setHint(CHARIOT_HINT), 400 + HINTS.length * 2600));
+    timers.push(window.setTimeout(() => setHint(powerHint()), 400 + HINTS.length * 2600));
     timers.push(window.setTimeout(() => setHint(null), 400 + HINTS.length * 2600 + 4200));
     return () => timers.forEach((t) => clearTimeout(t));
   }, [runId]);
@@ -284,10 +287,10 @@ export function GameScreen() {
 
       <div className="hud-powers">
         {boostActive && phase !== 'results' && (
-          <div className="power-chip power-chip-fire" data-testid="boost-bar">
-            <span>🔥</span>
+          <div className="power-chip power-chip-fire" data-testid="boost-bar" style={{ borderColor: engine.chariot.def.color }}>
+            <span>{engine.chariot.def.icon}</span>
             <div className="power-bar">
-              <div style={{ width: `${boostPct * 100}%` }} />
+              <div style={{ width: `${boostPct * 100}%`, background: engine.chariot.def.color }} />
             </div>
           </div>
         )}
@@ -306,10 +309,14 @@ export function GameScreen() {
       {(phase === 'playing' || phase === 'countdown') && (
         <button
           type="button"
-          className={`chariot-btn ${boostActive ? 'active' : ''} ${boost.charges <= 0 && !boostActive ? 'empty' : ''} ${hint === CHARIOT_HINT ? 'hinting' : ''}`}
-          style={boostActive ? { background: `conic-gradient(#ffd23f ${boostPct * 360}deg, rgba(60, 20, 4, 0.75) 0deg)` } : undefined}
+          className={`chariot-btn ${boostActive ? 'active' : ''} ${boost.charges <= 0 && !boostActive ? 'empty' : ''} ${hint && hint.includes('Toque duas vezes') || hint && hint.includes('Aperte E') ? 'hinting' : ''}`}
+          style={
+            boostActive
+              ? { background: `conic-gradient(${engine.chariot.def.color} ${boostPct * 360}deg, rgba(60, 20, 4, 0.75) 0deg)` }
+              : { background: `radial-gradient(circle at 35% 30%, #fff3c4, ${engine.chariot.def.color} 55%, #4a2610)` }
+          }
           data-testid="btn-chariot"
-          aria-label={`Carruagem de Fogo: ${boost.charges} cargas`}
+          aria-label={`${engine.chariot.def.name}: ${boost.charges} ${engine.chariot.def.chargeName[1]}`}
           disabled={phase !== 'playing'}
           onClick={() => {
             audio.unlock();
@@ -317,7 +324,7 @@ export function GameScreen() {
           }}
         >
           <span className="chariot-btn-inner">
-            <span className="chariot-btn-icon">🔥</span>
+            <span className="chariot-btn-icon">{engine.chariot.def.icon}</span>
             <span className="chariot-btn-count" data-testid="hud-chariot-charges">
               {boost.charges}
             </span>

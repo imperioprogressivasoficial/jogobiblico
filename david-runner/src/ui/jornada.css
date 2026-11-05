@@ -927,3 +927,94 @@ button.stop-card:active {
 .mission-fire {
   font-size: 13px;
 }
+
+/* ------------------------------------------------------------ poderes (loja) */
+.pill-btn {
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  font-family: var(--font-title);
+}
+.power-card {
+  background: linear-gradient(var(--parchment), #f0d9a8);
+  border: 3px solid #8a5530;
+  border-radius: 18px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.22);
+}
+.power-card.equipped {
+  box-shadow: 0 0 0 4px rgba(255, 201, 40, 0.55), 0 5px 12px rgba(0, 0, 0, 0.22);
+}
+.power-card.locked {
+  filter: saturate(0.6);
+}
+.power-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.power-card-icon {
+  width: 52px;
+  height: 52px;
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  border: 3px solid #5a3418;
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.2);
+}
+.power-card-title {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.power-card-title strong {
+  font-family: var(--font-title);
+  font-weight: normal;
+  font-size: 21px;
+  color: #6a3c1c;
+}
+.power-card-title small {
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(58, 36, 20, 0.7);
+}
+.power-lock {
+  font-size: 26px;
+}
+.power-card-desc {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+.power-card-quote {
+  font-size: 12px;
+  font-style: italic;
+  color: rgba(58, 36, 20, 0.8);
+}
+.power-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.power-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 12px;
+  padding: 6px 10px;
+  font-weight: 800;
+  font-size: 14px;
+  flex-wrap: wrap;
+}
+.power-stat .pips {
+  display: inline-flex;
+  margin-left: 8px;
+  vertical-align: middle;
+}

@@ -94,6 +94,9 @@ class UIManagerImpl {
     return true;
   }
 
+  /** Aba inicial da Loja (o botão de poderes do menu abre direto em "Poderes"). */
+  shopTab: 'herois' | 'trajes' | 'melhorias' | 'poderes' = 'herois';
+
   /** Inicia uma corrida com as escolhas atuais do jogador. */
   startRun(): void {
     const e = this.engine;
@@ -106,7 +109,7 @@ class UIManagerImpl {
       skinId: d.selectedSkin[d.selectedCharacter] ?? 'padrao',
       baseMultiplier: progression.baseMultiplier,
       durations: progression.durations(),
-      chariot: { charges: progression.chariotCharges, duration: progression.chariotDuration() },
+      chariot: { id: progression.data.equippedPower, charges: progression.chariotCharges, duration: progression.chariotDuration() },
       speedScale: diff.speedScale,
       rampScale: diff.rampScale,
     });

@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { GAME_HTML } from './src/gameHtml';
+import { configureGameAudio } from './src/audioMode';
 
 /**
  * App Expo do DAVID RUNNER: o jogo 3D (WebGL) roda dentro de uma WebView em tela cheia.
@@ -13,6 +14,7 @@ export default function App() {
   const web = useRef<WebView<{}>>(null);
 
   useEffect(() => {
+    void configureGameAudio();
     void ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
 
     // Android: botão "voltar" pausa a corrida / volta de tela; no menu fecha o app.

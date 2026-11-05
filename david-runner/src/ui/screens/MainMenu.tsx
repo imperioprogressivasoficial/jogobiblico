@@ -27,9 +27,18 @@ export function MainMenu() {
       <header className="menu-top">
         <div className="menu-top-left">
           <Currency />
-          <span className="pill pill-fire" title="Cargas da Carruagem de Fogo" data-testid="chariot-charges">
-            🔥 {d.chariot.charges}
-          </span>
+          <button
+            type="button"
+            className="pill pill-fire pill-btn"
+            title={`Poder equipado: ${progression.equippedPower.name}`}
+            data-testid="chariot-charges"
+            onClick={() => {
+              UIManager.shopTab = 'poderes';
+              UIManager.go('shop');
+            }}
+          >
+            {progression.equippedPower.icon} {progression.chariotCharges}
+          </button>
         </div>
         <Btn variant="wood" size="sm" onClick={() => UIManager.go('settings')} title="Configurações" testId="btn-settings">
           ⚙️

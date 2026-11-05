@@ -10,7 +10,8 @@ import {
   type StatKey,
   type UpgradeDef,
 } from '../data/progression';
-import { CHARIOT, chariotDuration, type Difficulty } from '../data/chariot';
+import { CHARIOT, type Difficulty } from '../data/chariot';
+import { MAX_CHARGES, POWERS, getPower, powerDuration, type PowerDef, type PowerId } from '../data/powers';
 import { STORY, type StoryEpisode } from '../data/story';
 import type { RunStats } from '../game/ScoreManager';
 import { Rng, hashString } from '../game/rng';
@@ -56,8 +57,14 @@ export interface SaveData {
   storiesRead: string[];
   /** Quizzes acertados (as moedas do quiz são dadas só na primeira vez). */
   storyQuizzes: string[];
-  /** Carruagem de Fogo: cargas guardadas e nível da melhoria de duração. */
+  /** Carruagem de Fogo (compatibilidade com saves antigos; o estado atual está em `powers.chariot`). */
   chariot: { charges: number; level: number };
+  /** Poderes: cargas guardadas e nível da melhoria de duração, por poder. */
+  powers: Record<string, { charges: number; level: number }>;
+  /** Poderes desbloqueados. */
+  unlockedPowers: string[];
+  /** Poder equipado (um por vez). */
+  equippedPower: string;
   characters: string[];
   selectedCharacter: string;
   skins: Record<string, string[]>;
@@ -82,6 +89,7 @@ export interface RunSummary {
   completedMissions: string[];
   unlockedCharacters: CharacterDef[];
   unlockedMaps: MapDef[];
+  unlockedPowers: PowerDef[];
   scrollCoins: number;
 }
 
@@ -121,6 +129,9 @@ function defaults(): SaveData {
     storiesRead: [],
     storyQuizzes: [],
     chariot: { charges: CHARIOT.startCharges, level: 0 },
+    powers: Object.fromEntries(POWERS.map((p) => [p.id, { charges: p.startCharges, level: 0 }])),
+    unlockedPowers: POWERS.filter((p) => p.unlock.type === 'free').map((p) => p.id),
+    equippedPower: 'chariot',
     characters: ['davi'],
     selectedCharacter: 'davi',
     skins: Object.fromEntries(CHARACTERS.map((c) => [c.id, ['padrao']])),
@@ -145,6 +156,18 @@ function merge(base: SaveData, loaded: Partial<SaveData>): SaveData {
   out.selectedSkin = { ...base.selectedSkin, ...(loaded.selectedSkin ?? {}) };
   out.missions = { ...base.missions, ...(loaded.missions ?? {}) };
   out.chariot = { ...base.chariot, ...(loaded.chariot ?? {}) };
+  out.powers = { ...base.powers, ...(loaded.powers ?? {}) };
+  if (!loaded.powers) out.powers.chariot = { ...out.chariot }; // save antigo: a carruagem vira o poder "chariot"
+  for (const p of POWERS) {
+    const st = out.powers[p.id] ?? { charges: p.startCharges, level: 0 };
+    out.powers[p.id] = {
+      charges: Math.max(0, Math.min(MAX_CHARGES, Math.floor(st.charges || 0))),
+      level: Math.max(0, Math.min(p.upgradeCosts.length, Math.floor(st.level || 0))),
+    };
+  }
+  out.unlockedPowers = Array.from(new Set([...base.unlockedPowers, ...(loaded.unlockedPowers ?? [])])).filter((id) => POWERS.some((p) => p.id === id));
+  if (!out.unlockedPowers.includes(out.equippedPower)) out.equippedPower = 'chariot';
+  out.chariot = { ...out.powers.chariot };
   migrateStories(out);
   return out;
 }
@@ -312,7 +335,7 @@ export class ProgressionManager {
     const t = MISSION_POOL.find((x) => x.id === ms.templateId)!;
     ms.claimed = true;
     this.data.coins += t.reward;
-    this.data.chariot.charges = Math.min(CHARIOT.maxCharges, this.data.chariot.charges + 1);
+    this.addPowerCharge(this.data.equippedPower, 1);
     const m = this.data.missions;
     if (!m.setClaimed && m.list.every((x) => x.claimed)) {
       m.setClaimed = true;
@@ -473,41 +496,124 @@ export class ProgressionManager {
     return true;
   }
 
-  // ------------------------------------------------------------ Carruagem de Fogo
+  // ------------------------------------------------------------ Poderes
+  get equippedPower(): PowerDef {
+    return getPower(this.data.equippedPower);
+  }
+
+  powerState(id: string): { charges: number; level: number } {
+    return this.data.powers[id] ?? { charges: 0, level: 0 };
+  }
+
+  isPowerUnlocked(id: string): boolean {
+    return this.data.unlockedPowers.includes(id);
+  }
+
+  /** Mantém `chariot` espelhando `powers.chariot` (saves antigos / testes). */
+  private syncChariot(): void {
+    this.data.chariot = { ...this.powerState('chariot') };
+  }
+
+  addPowerCharge(id: string, n: number): void {
+    const st = this.data.powers[id];
+    if (!st) return;
+    st.charges = Math.max(0, Math.min(MAX_CHARGES, st.charges + n));
+    this.syncChariot();
+  }
+
   get chariotCharges(): number {
-    return this.data.chariot.charges;
+    return this.powerState(this.data.equippedPower).charges;
   }
 
   chariotDuration(): number {
-    return chariotDuration(this.data.chariot.level);
+    const def = this.equippedPower;
+    return powerDuration(def, this.powerState(def.id).level);
+  }
+
+  powerDuration(id: string): number {
+    return powerDuration(getPower(id), this.powerState(id).level);
+  }
+
+  powerUpgradeCost(id: string): number | null {
+    const def = getPower(id);
+    const lvl = this.powerState(id).level;
+    return lvl >= def.upgradeCosts.length ? null : def.upgradeCosts[lvl];
   }
 
   chariotUpgradeCost(): number | null {
-    const lvl = this.data.chariot.level;
-    return lvl >= CHARIOT.upgradeCosts.length ? null : CHARIOT.upgradeCosts[lvl];
+    return this.powerUpgradeCost(this.data.equippedPower);
+  }
+
+  buyPowerCharge(id: string): boolean {
+    const def = getPower(id);
+    const st = this.data.powers[id];
+    if (!st || !this.isPowerUnlocked(id) || this.data.coins < def.chargeCost || st.charges >= MAX_CHARGES) return false;
+    this.data.coins -= def.chargeCost;
+    st.charges++;
+    this.syncChariot();
+    this.commit();
+    return true;
   }
 
   buyChariotCharge(): boolean {
-    if (this.data.coins < CHARIOT.chargeCost || this.data.chariot.charges >= CHARIOT.maxCharges) return false;
-    this.data.coins -= CHARIOT.chargeCost;
-    this.data.chariot.charges++;
+    return this.buyPowerCharge(this.data.equippedPower);
+  }
+
+  buyPowerUpgrade(id: string): boolean {
+    const cost = this.powerUpgradeCost(id);
+    if (cost === null || !this.isPowerUnlocked(id) || this.data.coins < cost) return false;
+    this.data.coins -= cost;
+    this.data.powers[id].level++;
+    this.syncChariot();
     this.commit();
     return true;
   }
 
   buyChariotUpgrade(): boolean {
-    const cost = this.chariotUpgradeCost();
-    if (cost === null || this.data.coins < cost) return false;
-    this.data.coins -= cost;
-    this.data.chariot.level++;
+    return this.buyPowerUpgrade(this.data.equippedPower);
+  }
+
+  /** Desbloqueio: grátis, pela história revelada, ou pagando moedas. */
+  powerUnlockStatus(id: string): { unlocked: boolean; byStory: boolean; canBuy: boolean; label: string } {
+    const def = getPower(id);
+    if (this.isPowerUnlocked(id)) return { unlocked: true, byStory: false, canBuy: false, label: 'Desbloqueado' };
+    if (def.unlock.type === 'free') return { unlocked: false, byStory: true, canBuy: true, label: 'Grátis' };
+    const u = def.unlock;
+    return {
+      unlocked: false,
+      byStory: this.data.scrolls.includes(u.storyId),
+      canBuy: this.data.coins >= u.coins,
+      label: `Revele a história “${u.storyTitle}” ou pague ${u.coins.toLocaleString('pt-BR')} moedas`,
+    };
+  }
+
+  unlockPower(id: string, payWithCoins: boolean): boolean {
+    const def = getPower(id);
+    const st = this.powerUnlockStatus(id);
+    if (st.unlocked) return false;
+    if (payWithCoins) {
+      if (!st.canBuy || def.unlock.type !== 'story') return false;
+      this.data.coins -= def.unlock.coins;
+    } else if (!st.byStory) return false;
+    this.data.unlockedPowers.push(id);
+    this.addPowerCharge(id, def.unlockCharges);
     this.commit();
     return true;
   }
 
-  /** Gasta 1 carga (chamado quando a carruagem é ativada na corrida). */
+  equipPower(id: string): boolean {
+    if (!this.isPowerUnlocked(id)) return false;
+    this.data.equippedPower = id as PowerId;
+    this.commit();
+    return true;
+  }
+
+  /** Gasta 1 carga do poder equipado (chamado quando o poder é ativado na corrida). */
   useChariotCharge(): void {
-    if (this.data.chariot.charges <= 0) return;
-    this.data.chariot.charges--;
+    const st = this.data.powers[this.data.equippedPower];
+    if (!st || st.charges <= 0) return;
+    st.charges--;
+    this.syncChariot();
     this.commit();
   }
 
@@ -627,6 +733,16 @@ export class ProgressionManager {
         }
       }
     }
+    const unlockedPowers: PowerDef[] = [];
+    for (const pw of POWERS) {
+      if (this.isPowerUnlocked(pw.id) || pw.unlock.type !== 'story') continue;
+      if (d.scrolls.includes(pw.unlock.storyId)) {
+        d.unlockedPowers.push(pw.id);
+        this.addPowerCharge(pw.id, pw.unlockCharges);
+        unlockedPowers.push(pw);
+        this.pushToast(pw.icon, `Novo poder: ${pw.name}!`, 'Equipe na Loja → Poderes.');
+      }
+    }
     const unlockedMaps: MapDef[] = [];
     for (const m of MAPS) {
       if (d.maps.includes(m.id)) continue;
@@ -651,6 +767,7 @@ export class ProgressionManager {
       completedMissions,
       unlockedCharacters,
       unlockedMaps,
+      unlockedPowers,
       scrollCoins,
     };
   }

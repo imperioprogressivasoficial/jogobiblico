@@ -180,9 +180,42 @@ const RUN = (seed, extra = {}) => ({
   await page.evaluate(() => { window.__davidRunner.progression.data.coins = 1000; window.__davidRunner.progression.updateSettings({}); });
   await page.click('[data-testid=btn-shop]');
   await page.click('[data-testid=tab-poderes]');
-  await page.click('[data-testid=buy-chariot-charge]');
-  const bought = await page.evaluate(() => ({ c: window.__davidRunner.progression.data.chariot.charges, coins: window.__davidRunner.progression.data.coins }));
+  await page.click('[data-testid=buy-charge-chariot]');
+  const bought = await page.evaluate(() => ({ c: window.__davidRunner.progression.data.powers.chariot.charges, coins: window.__davidRunner.progression.data.coins }));
   assert(bought.c === 1 && bought.coins === 750, `comprar carga na loja (cargas=${bought.c}, moedas=${bought.coins})`);
+
+  // ---------------------------------------------------------------- outros poderes
+  const RUNP = (id, charges, seed) => page.evaluate(({ id, charges, seed }) => {
+    const e = window.__davidRunner.engine;
+    e.startRun({ mapId: 'jerusalem', characterId: 'davi', skinId: 'padrao', baseMultiplier: 1, durations: { magnet: 10, double: 10, shield: 0 }, seed, chariot: { id, charges, duration: 7 } });
+  }, { id, charges, seed });
+  // Funda: a pedra destrói o obstáculo à frente (semente 3: barraca na pista do meio logo no início)
+  await RUNP('funda', 5, 3);
+  let r2 = await page.evaluate(() => { const e = window.__davidRunner.engine; while (e.distance < 30) e.simulate(0.1); const ok = e.activateBoost(); e.simulate(0.6); return { ok, charges: e.chariot.charges, smashed: e.getRunStats().smashed, mode: e.mode }; });
+  assert(r2.ok && r2.charges === 4 && r2.smashed === 1, `Funda lança pedra e destrói 1 obstáculo (pedras=${r2.charges}, destruídos=${r2.smashed})`);
+  // Manto: atravessa sem destruir
+  await RUNP('manto', 2, 3);
+  r2 = await page.evaluate(() => { const e = window.__davidRunner.engine; e.activateBoost(); e.simulate(5); return { mode: e.mode, smashed: e.getRunStats().smashed, dist: e.distance }; });
+  assert(r2.mode === 'playing' && r2.smashed === 0 && r2.dist > 50, `Manto protege sem destruir (modo=${r2.mode}, destruídos=${r2.smashed})`);
+  // Cajado: obstáculos se afastam e não batem
+  await RUNP('cajado', 2, 3);
+  r2 = await page.evaluate(() => { const e = window.__davidRunner.engine; e.activateBoost(); e.simulate(5); const far = e.obstacles.active.filter((o) => o.hit && Math.abs(o.mesh.position.x) > 4).length; return { mode: e.mode, far }; });
+  assert(r2.mode === 'playing' && r2.far >= 1, `Cajado afasta os obstáculos do caminho (afastados=${r2.far}, modo=${r2.mode})`);
+  // Harpa: moedas em dobro
+  await RUNP('harpa', 2, 5);
+  r2 = await page.evaluate(() => { const e = window.__davidRunner.engine; e.autopilot = true; e.simulate(2); const c0 = e.getRunStats().coins; e.activateBoost(); e.simulate(1); const c1 = e.getRunStats().coins; e.autopilot = false; return { c0, c1, mul: e.score.multiplier }; });
+  assert(r2.c1 > r2.c0 && r2.mul === 2, `Harpa dobra moedas e pontos (x${r2.mul})`);
+  // Sansão: destrói sem acelerar
+  await RUNP('sansao', 2, 3);
+  r2 = await page.evaluate(() => { const e = window.__davidRunner.engine; e.activateBoost(); e.simulate(5); return { mode: e.mode, smashed: e.getRunStats().smashed, mul: e.chariot.speedMul }; });
+  assert(r2.mode === 'playing' && r2.smashed >= 1 && r2.mul === 1, `Força de Sansão derruba obstáculos sem acelerar (destruídos=${r2.smashed})`);
+  // desbloqueio e equipar na loja
+  await page.evaluate(() => { const p = window.__davidRunner.progression; p.data.coins = 5000; p.updateSettings({}); });
+  await page.click('[data-testid=unlock-harpa]');
+  await page.click('[data-testid=equip-harpa]');
+  const eq = await page.evaluate(() => ({ eq: window.__davidRunner.progression.data.equippedPower, ch: window.__davidRunner.progression.data.powers.harpa.charges, coins: window.__davidRunner.progression.data.coins }));
+  assert(eq.eq === 'harpa' && eq.ch === 2 && eq.coins === 4000, `desbloquear (1.000 moedas) e equipar a Harpa (cargas=${eq.ch})`);
+  await page.evaluate(() => window.__davidRunner.progression.equipPower('chariot'));
   await page.click('[data-testid=back]');
 
   // ---------------------------------------------------------------- Modo Criança

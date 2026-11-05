@@ -99,6 +99,9 @@ export class BoostEffect {
   private lineData = new Float32Array(LINES * 4); // x, y, z, comprimento
 
   private debris: Debris[] = [];
+  /** Estilo do poder equipado: cor dos brilhos e se mostra a carruagem com cavalos. */
+  private tint = new THREE.Color(0xff8a1e);
+  private showChariot = true;
   private intensity = 0;
   private time = 0;
   private ringT = 1;
@@ -318,6 +321,19 @@ export class BoostEffect {
     d[i * 4 + 3] = 2.5 + Math.random() * 4.5;
   }
 
+  /** Define a cor dos efeitos e se a carruagem com cavalos aparece (só na Carruagem de Fogo). */
+  setStyle(glow: number, chariot: boolean): void {
+    this.tint.set(glow);
+    this.showChariot = chariot;
+    const warm = new THREE.Color(glow).lerp(new THREE.Color(0xffffff), 0.45);
+    (this.auraOuter.material as THREE.SpriteMaterial).color.set(glow);
+    (this.auraInner.material as THREE.SpriteMaterial).color.copy(warm);
+    (this.pillar.material as THREE.SpriteMaterial).color.set(glow);
+    (this.flash.material as THREE.SpriteMaterial).color.copy(warm);
+    this.ringMat.color.copy(warm);
+    this.lineMat.color.copy(warm);
+  }
+
   /** Efeito de ativação: onda de choque, clarão e explosão de chamas. */
   pulse(): void {
     this.ringT = 0;
@@ -403,7 +419,7 @@ export class BoostEffect {
     const fk = Math.min(1, k * 1.2);
     this.fireMat.opacity = 0.72 * fk * (0.9 + Math.sin(t * 31) * 0.1);
     this.coreMat.opacity = 0.8 * fk;
-    this.chariot.visible = k > 0.02;
+    this.chariot.visible = this.showChariot && k > 0.02;
     this.chariot.position.y = sliding ? -0.15 : 0;
     const roll = (speed * dt) / 0.46;
     for (const w of this.wheels) w.rotation.x -= roll;
@@ -466,18 +482,19 @@ export class BoostEffect {
       this.ePos[i * 3] += this.eVel[i * 3] * dt;
       this.ePos[i * 3 + 1] += this.eVel[i * 3 + 1] * dt;
       this.ePos[i * 3 + 2] += this.eVel[i * 3 + 2] * dt + trail;
-      // branco-amarelo → laranja → vermelho
+      // branco → cor do poder → escurece (fogo: branco-amarelo → laranja → vermelho)
       const c = this.eCol;
+      const tr = this.tint.r, tg = this.tint.g, tb = this.tint.b;
       if (life < 0.35) {
         const u = life / 0.35;
-        c[i * 3] = 1;
-        c[i * 3 + 1] = 0.95 - u * 0.4;
-        c[i * 3 + 2] = 0.62 - u * 0.5;
+        c[i * 3] = 1 - u * (1 - tr) * 0.5;
+        c[i * 3 + 1] = 1 - u * (1 - tg) * 0.6;
+        c[i * 3 + 2] = 1 - u * (1 - tb) * 0.7;
       } else {
         const u = (life - 0.35) / 0.65;
-        c[i * 3] = 1 - u * 0.25;
-        c[i * 3 + 1] = 0.55 - u * 0.42;
-        c[i * 3 + 2] = 0.12 - u * 0.08;
+        c[i * 3] = tr * (1 - u * 0.3);
+        c[i * 3 + 1] = tg * (1 - u * 0.6);
+        c[i * 3 + 2] = tb * (1 - u * 0.6);
       }
       const big = this.eBig[i] === 1;
       this.eAlpha[i] = (1 - life) * (big ? 0.75 : 1);
