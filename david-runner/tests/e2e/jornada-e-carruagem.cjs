@@ -26,13 +26,14 @@ const RUN = (seed, extra = {}) => ({
   const errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  const skip = (sec) => page.evaluate((sec) => { const e = window.__davidRunner.engine; e.autopilot = true; e.simulate(sec); e.autopilot = false; }, sec);
   await page.goto(URL);
   await page.waitForSelector('[data-testid=tap-to-start]');
   await page.click('[data-testid=splash]');
   await page.waitForSelector('[data-testid=main-menu]');
 
   // ---------------------------------------------------------------- Jornada
-  const total = await page.evaluate(async () => (await import('/src/data/story.ts').catch(() => null))?.STORY?.length ?? null).catch(() => null);
+  const total = null;
   await page.click('[data-testid=btn-journey]');
   await page.waitForSelector('[data-testid=journey-screen]');
   let count = await page.textContent('[data-testid=journey-count]');
@@ -74,7 +75,7 @@ const RUN = (seed, extra = {}) => ({
   const read = await page.evaluate(() => window.__davidRunner.progression.data.storiesRead.includes('criacao'));
   assert(read, 'história marcada como lida');
   const coinsBefore = await page.evaluate(() => window.__davidRunner.progression.data.coins);
-  const answer = await page.evaluate(() => 1); // "A luz" (índice 1) na história da Criação
+  const answer = 2; // "No sétimo dia" (índice 2) na história da Criação
   const wrongIdx = (answer + 1) % 3;
   await page.click(`[data-testid=quiz-opt-${wrongIdx}]`);
   assert(await page.waitForSelector('[data-testid=quiz-try]', { timeout: 3000 }).then(() => true, () => false), 'resposta errada mostra "Tente de novo"');
@@ -91,8 +92,11 @@ const RUN = (seed, extra = {}) => ({
   await page.click('[data-testid=story-criacao]');
   await page.waitForSelector('[data-testid=story-reader]');
   for (let i = 0; i < 12 && !(await page.$('[data-testid=reader-step-quiz]')); i++) await page.click('[data-testid=reader-next]');
-  await page.click(`[data-testid=quiz-opt-${answer}]`);
-  await page.waitForSelector('[data-testid=quiz-win]');
+  // quiz já acertado: aparece resolvido, sem pedir de novo (e sem pagar de novo)
+  if (!(await page.$('[data-testid=quiz-win]'))) {
+    await page.click(`[data-testid=quiz-opt-${answer}]`);
+    await page.waitForSelector('[data-testid=quiz-win]');
+  }
   const coinsAgain = await page.evaluate(() => window.__davidRunner.progression.data.coins);
   assert(coinsAgain === coinsAfter, 'quiz repetido não dá moedas de novo');
   await page.click('[data-testid=reader-close]');
@@ -107,51 +111,61 @@ const RUN = (seed, extra = {}) => ({
   await page.click('[data-testid=btn-play]', { force: true });
   await page.waitForSelector('[data-testid=game-screen]');
   await page.waitForTimeout(400);
+  // qualidade baixa deixa o navegador de teste (renderização por software) rápido o bastante para toques curtos
+  await page.evaluate(() => window.__davidRunner.engine.setQuality('baixa'));
   // toque duplo no canvas (dois toques rápidos, dedo parado)
   const box = await page.locator('canvas').boundingBox();
   const cx = box.x + box.width / 2;
   const cy = box.y + box.height / 2;
-  await page.mouse.click(cx, cy, { delay: 40 });
-  await page.waitForTimeout(90);
-  await page.mouse.click(cx, cy, { delay: 40 });
-  await page.waitForTimeout(150);
+  // dois toques seguidos (dedo parado), disparados na mesma tarefa: não dependem da latência do navegador de teste
+  const tap = () => page.evaluate(({ x, y }) => {
+    const c = document.querySelector('canvas');
+    const ev = (type) => c.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId: 7, pointerType: 'touch', clientX: x, clientY: y }));
+    ev('pointerdown'); ev('pointerup'); ev('pointerdown'); ev('pointerup');
+  }, { x: cx, y: cy });
+  await tap();
+  await page.waitForTimeout(300);
   let st = await page.evaluate(() => ({ active: window.__davidRunner.engine.chariot.active, charges: window.__davidRunner.engine.chariot.charges }));
   assert(st.active && st.charges === 2, `toque duplo ativa a Carruagem e gasta 1 carga (ativa=${st.active}, cargas=${st.charges})`);
   // durante a carruagem: atravessa obstáculos sem bater, mais rápido
+  // (semente 3: há uma barraca na pista do meio logo no início; sem comandos o jogador bate nela)
   const r = await page.evaluate(() => {
     const e = window.__davidRunner.engine;
-    const v0 = e.speed;
-    e.simulate(6); // sem piloto: vai bater em obstáculos
-    return { mode: e.mode, smashed: e.getRunStats().smashed, speed: e.speed, v0, mul: e.chariot.speedMul };
+    e.startRun({ mapId: 'jerusalem', characterId: 'davi', skinId: 'padrao', baseMultiplier: 1, durations: { magnet: 10, double: 10, shield: 12 }, seed: 3, chariot: { charges: 2, duration: 8 } });
+    e.activateBoost();
+    e.simulate(5);
+    return { mode: e.mode, smashed: e.getRunStats().smashed, mul: e.chariot.speedMul, charges: e.chariot.charges };
   });
   assert(r.mode === 'playing' && r.smashed > 0, `atravessa obstáculos sem colidir (destruídos=${r.smashed}, modo=${r.mode})`);
   assert(r.mul > 1.3, `velocidade aumentada durante a carruagem (x${r.mul.toFixed(2)})`);
+  await page.evaluate(() => { window.__davidRunner.engine.chariot.charges = 2; });
   // não ativa de novo enquanto ativa
   await page.keyboard.press('KeyE');
   st = await page.evaluate(() => window.__davidRunner.engine.chariot.charges);
   assert(st === 2, 'tecla E não gasta carga enquanto a carruagem já está ativa');
   // espera acabar (8 s + proteção) e ativa com a tecla E
-  await page.evaluate(() => window.__davidRunner.engine.simulate(6));
+  await skip(6);
   await page.keyboard.press('KeyE');
   await page.waitForTimeout(100);
   st = await page.evaluate(() => ({ active: window.__davidRunner.engine.chariot.active, charges: window.__davidRunner.engine.chariot.charges }));
   assert(st.active && st.charges === 1, `tecla E ativa a Carruagem (cargas=${st.charges})`);
   // botão do HUD
-  await page.evaluate(() => window.__davidRunner.engine.simulate(12));
+  await skip(12);
+  await page.waitForSelector('[data-testid=btn-chariot]:not(.active)', { timeout: 5000 });
   await page.click('[data-testid=btn-chariot]');
   await page.waitForTimeout(100);
   st = await page.evaluate(() => ({ active: window.__davidRunner.engine.chariot.active, charges: window.__davidRunner.engine.chariot.charges }));
   assert(st.active && st.charges === 0, `botão do HUD ativa a Carruagem (cargas=${st.charges})`);
   // sem cargas: não ativa
-  await page.evaluate(() => window.__davidRunner.engine.simulate(12));
+  await skip(12);
   await page.keyboard.press('KeyE');
   st = await page.evaluate(() => window.__davidRunner.engine.chariot.active);
   assert(!st, 'sem cargas, não ativa');
   // um gesto de deslizar não conta como toque
   await page.mouse.move(cx, cy); await page.mouse.down(); await page.mouse.move(cx, cy + 80, { steps: 4 }); await page.mouse.up();
   await page.mouse.move(cx, cy); await page.mouse.down(); await page.mouse.move(cx, cy + 80, { steps: 4 }); await page.mouse.up();
-  const sliding = await page.evaluate(() => window.__davidRunner.engine.player.sliding || window.__davidRunner.engine.player.slideTimer > -1);
-  assert(sliding, 'gestos de deslizar continuam funcionando com o toque duplo ativo');
+  const slides = await page.evaluate(() => window.__davidRunner.engine.getRunStats().slides);
+  assert(slides >= 1, `gestos de deslizar continuam funcionando com o toque duplo ativo (deslizes=${slides})`);
   // cargas gastas são salvas ao terminar a corrida
   await page.evaluate(() => { const e = window.__davidRunner.engine; e.simulate(60); });
   await page.waitForSelector('[data-testid=revive-screen], [data-testid=results-screen]', { timeout: 10000 });

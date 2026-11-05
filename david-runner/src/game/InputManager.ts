@@ -1,8 +1,8 @@
 export type GameAction = 'left' | 'right' | 'jump' | 'slide' | 'pause' | 'boost';
 
 /** Toque duplo: tempo máximo entre os toques (ms), duração e movimento máximos de cada toque. */
-const DOUBLE_TAP_GAP = 300;
-const TAP_MAX_DURATION = 280;
+const DOUBLE_TAP_GAP = 380;
+const TAP_MAX_DURATION = 350;
 const TAP_MAX_MOVE = 14;
 const DOUBLE_TAP_MAX_DISTANCE = 90;
 
