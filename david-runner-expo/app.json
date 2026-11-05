@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "David Runner",
+    "slug": "david-runner",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "br.com.imperioprogressivas.davidrunner",
+      "requireFullScreen": true,
+      "infoPlist": {
+        "UIStatusBarHidden": true,
+        "UIViewControllerBasedStatusBarAppearance": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#3D9BE9",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "br.com.imperioprogressivas.davidrunner"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "scheme": "davidrunner",
+    "backgroundColor": "#3d9be9",
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#3d9be9",
+          "image": "./assets/icon.png",
+          "imageWidth": 220
+        }
+      ],
+      "expo-screen-orientation"
+    ]
+  }
+}
