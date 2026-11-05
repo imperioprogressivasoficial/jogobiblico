@@ -59,6 +59,8 @@ services:
     working_dir: /data/expo
     environment:
       - EXPO_PACKAGER_PROXY_URL=https://srv1969277.hstgr.cloud
+      # token de acesso da conta Expo (assina o app para o Expo Go logado)
+      - EXPO_TOKEN=${EXPO_TOKEN}
       - EXPO_NO_TELEMETRY=1
       - CI=1
     labels:

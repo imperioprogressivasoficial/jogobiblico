@@ -39,6 +39,12 @@
         }
       ],
       "expo-screen-orientation"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "37f229e6-afae-4a15-bfb5-489c7582e072"
+      }
+    },
+    "owner": "vinny825357"
   }
 }

@@ -20,4 +20,8 @@ DR_UPLOAD_TOKEN=<token> ./deploy/vps/publicar.sh
 ```
 Depois reinicie o serviço `expo` (painel Docker da Hostinger → projeto david-runner → Restart).
 
+## Conta Expo
+
+O projeto está registrado na conta Expo `vinny825357` (https://expo.dev/accounts/vinny825357/projects/david-runner). O serviço `expo` usa a variável `EXPO_TOKEN` (token de acesso dessa conta, definido só no painel Docker da Hostinger) para assinar o app; sem ela, o Expo Go só abre o projeto se estiver deslogado. Para trocar ou revogar o token: expo.dev → Account settings → Access tokens.
+
 O servidor do Expo é de desenvolvimento: serve o app a quem tiver o endereço. Para desligá-lo, pare o projeto ou remova o serviço `expo`.
