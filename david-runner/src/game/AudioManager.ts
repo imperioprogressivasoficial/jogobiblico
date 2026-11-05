@@ -53,7 +53,13 @@ export type Sfx =
   | 'buy'
   | 'error'
   | 'gameover'
-  | 'achievement';
+  | 'achievement'
+  | 'chariot'
+  | 'chariotEnd'
+  | 'smash'
+  | 'victory'
+  | 'oops'
+  | 'page';
 
 export class AudioManager {
   private ctx: AudioContext | null = null;
@@ -73,6 +79,9 @@ export class AudioManager {
   private lastCoin = 0;
   private suspendedByPause = false;
   private paused = false;
+  /** Som contínuo de fogo/vento da Carruagem de Fogo. */
+  private boostLoop: { src: AudioBufferSourceNode; lfo: OscillatorNode; gain: GainNode } | null = null;
+  private boostWanted = false;
 
   /** Deve ser chamado a partir de um gesto do usuário (política dos navegadores). */
   unlock(): void {
@@ -96,6 +105,10 @@ export class AudioManager {
       const d = this.noise.getChannelData(0);
       for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
       if (this.songName) this.playMusic(this.songName, true);
+      if (this.boostWanted) {
+        this.boostWanted = false;
+        this.setBoostLoop(true);
+      }
     }
     if (this.ctx.state === 'suspended' && !this.suspendedByPause) void this.ctx.resume();
   }
@@ -310,6 +323,44 @@ export class AudioManager {
     o.stop(t + dur + 0.05);
   }
 
+  // ------------------------------------------------------------------ Carruagem de Fogo
+  /** Liga/desliga o rugido do fogo enquanto a carruagem está ativa (idempotente). */
+  setBoostLoop(on: boolean): void {
+    if (on === this.boostWanted) return;
+    this.boostWanted = on;
+    const ctx = this.ctx;
+    if (!ctx) return;
+    if (on) {
+      if (this.boostLoop) return;
+      const src = ctx.createBufferSource();
+      src.buffer = this.noise;
+      src.loop = true;
+      const low = ctx.createBiquadFilter();
+      low.type = 'bandpass';
+      low.frequency.value = 520;
+      low.Q.value = 0.6;
+      const gain = ctx.createGain();
+      gain.gain.value = 0;
+      gain.gain.setTargetAtTime(0.16, ctx.currentTime, 0.12);
+      // tremulação das chamas
+      const lfo = ctx.createOscillator();
+      lfo.frequency.value = 9;
+      const lfoGain = ctx.createGain();
+      lfoGain.gain.value = 260;
+      lfo.connect(lfoGain).connect(low.frequency);
+      src.connect(low).connect(gain).connect(this.sfxGain);
+      src.start();
+      lfo.start();
+      this.boostLoop = { src, lfo, gain };
+    } else if (this.boostLoop) {
+      const { src, lfo, gain } = this.boostLoop;
+      gain.gain.setTargetAtTime(0, ctx.currentTime, 0.15);
+      src.stop(ctx.currentTime + 0.8);
+      lfo.stop(ctx.currentTime + 0.8);
+      this.boostLoop = null;
+    }
+  }
+
   // ------------------------------------------------------------------ efeitos
   play(sfx: Sfx): void {
     const ctx = this.ctx;
@@ -378,6 +429,34 @@ export class AudioManager {
         break;
       case 'achievement':
         [74, 78, 81, 86, 81, 86].forEach((n, i) => this.tone(midi(n), t + i * 0.07, 0.22, 0.1, 'triangle'));
+        break;
+      case 'chariot':
+        // rajada de vento subindo + estouro de fogo + fanfarra
+        this.noiseHit(t, 0.32, 0.7, 'bandpass', 300, this.sfxGain, 0.8, 3200);
+        this.kick(t, 0.7, this.sfxGain);
+        this.tone(110, t, 0.6, 0.18, 'sawtooth', 330);
+        [62, 69, 74, 78, 81, 86].forEach((n, i) => this.tone(midi(n), t + 0.12 + i * 0.07, 0.35, 0.11, i % 2 ? 'square' : 'triangle'));
+        break;
+      case 'chariotEnd':
+        this.noiseHit(t, 0.12, 0.6, 'bandpass', 2400, this.sfxGain, 0.8, 300);
+        [81, 78, 74].forEach((n, i) => this.tone(midi(n), t + i * 0.09, 0.25, 0.08, 'triangle'));
+        break;
+      case 'smash':
+        this.noiseHit(t, 0.3, 0.28, 'lowpass', 2600, this.sfxGain, 0.7, 200);
+        this.tone(220, t, 0.16, 0.12, 'square', 70);
+        this.noiseHit(t + 0.03, 0.08, 0.3, 'highpass', 4000, this.sfxGain);
+        break;
+      case 'victory':
+        [72, 76, 79, 84].forEach((n, i) => this.tone(midi(n), t + i * 0.11, 0.3, 0.12, 'triangle'));
+        [84, 88, 91].forEach((n) => this.tone(midi(n), t + 0.5, 0.8, 0.07, 'sine'));
+        this.tone(midi(48), t + 0.5, 0.8, 0.1, 'triangle');
+        break;
+      case 'oops':
+        this.tone(midi(67), t, 0.18, 0.09, 'sine');
+        this.tone(midi(64), t + 0.16, 0.3, 0.09, 'sine');
+        break;
+      case 'page':
+        this.noiseHit(t, 0.07, 0.22, 'bandpass', 2600, this.sfxGain, 0.7, 900);
         break;
     }
   }

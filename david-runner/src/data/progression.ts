@@ -1,4 +1,5 @@
 /** Conquistas, missões diárias e melhorias da loja. */
+import { STORY } from './story';
 
 export type StatKey =
   | 'totalRuns'
@@ -14,7 +15,11 @@ export type StatKey =
   | 'bestCoinsRun'
   | 'charactersOwned'
   | 'mapsUnlocked'
-  | 'missionSets';
+  | 'missionSets'
+  | 'totalBoosts'
+  | 'storiesUnlocked'
+  | 'storiesRead'
+  | 'quizzesDone';
 
 export interface AchievementDef {
   id: string;
@@ -38,7 +43,26 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'a_5000total', name: 'Mercador de Jerusalém', description: 'Acumule 5.000 moedas coletadas.', icon: '💰', stat: 'totalCoins', goal: 5000, reward: 500 },
   { id: 'a_pontos', name: 'Pontuação de Gigante', description: 'Faça 25.000 pontos em uma corrida.', icon: '⭐', stat: 'bestScore', goal: 25000, reward: 500 },
   { id: 'a_pergaminho', name: 'Estudioso', description: 'Encontre seu primeiro pergaminho.', icon: '📜', stat: 'totalScrolls', goal: 1, reward: 100 },
-  { id: 'a_biblioteca', name: 'Biblioteca Sagrada', description: 'Encontre 24 pergaminhos.', icon: '📚', stat: 'totalScrolls', goal: 24, reward: 1500 },
+  {
+    id: 'a_biblioteca',
+    name: 'Biblioteca Sagrada',
+    description: `Revele todas as ${STORY.length} histórias da Jornada Bíblica.`,
+    icon: '📚',
+    stat: 'storiesUnlocked',
+    goal: STORY.length,
+    reward: 1500,
+  },
+  { id: 'a_leitor', name: 'Pequeno Leitor', description: 'Leia sua primeira história da Jornada Bíblica.', icon: '📖', stat: 'storiesRead', goal: 1, reward: 100 },
+  {
+    id: 'a_sabio',
+    name: 'Sábio como Salomão',
+    description: `Acerte o quiz de ${Math.min(10, STORY.length)} histórias.`,
+    icon: '🦉',
+    stat: 'quizzesDone',
+    goal: Math.min(10, STORY.length),
+    reward: 400,
+  },
+  { id: 'a_carruagem', name: 'Carro de Fogo', description: 'Chame a Carruagem de Fogo pela primeira vez.', icon: '🔥', stat: 'totalBoosts', goal: 1, reward: 100 },
   { id: 'a_reliquia', name: 'Achado Raro', description: 'Encontre uma relíquia.', icon: '💎', stat: 'totalRelics', goal: 1, reward: 200 },
   { id: 'a_pulos', name: 'Saltador', description: 'Pule 300 vezes.', icon: '🦘', stat: 'totalJumps', goal: 300, reward: 250 },
   { id: 'a_deslizes', name: 'Escorregadio', description: 'Deslize 200 vezes.', icon: '🛷', stat: 'totalSlides', goal: 200, reward: 250 },

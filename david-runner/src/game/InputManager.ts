@@ -1,9 +1,16 @@
-export type GameAction = 'left' | 'right' | 'jump' | 'slide' | 'pause';
+export type GameAction = 'left' | 'right' | 'jump' | 'slide' | 'pause' | 'boost';
+
+/** Toque duplo: tempo máximo entre os toques (ms), duração e movimento máximos de cada toque. */
+const DOUBLE_TAP_GAP = 300;
+const TAP_MAX_DURATION = 280;
+const TAP_MAX_MOVE = 14;
+const DOUBLE_TAP_MAX_DISTANCE = 90;
 
 /**
  * Teclado (setas, WASD, espaço) e gestos de deslizar no celular.
  * O gesto é reconhecido durante o movimento do dedo (não espera soltar),
- * para a resposta ser imediata.
+ * para a resposta ser imediata. Dois toques rápidos com o dedo quase parado
+ * (ou a tecla E / Shift) chamam a Carruagem de Fogo.
  */
 export class InputManager {
   private startX = 0;
@@ -11,6 +18,12 @@ export class InputManager {
   private tracking = false;
   private consumed = false;
   private pointerId = -1;
+  private downTime = 0;
+  private maxMove = 0;
+  /** Último toque simples (sem deslizar): fim do toque e posição. */
+  private lastTapEnd = -1e9;
+  private lastTapX = 0;
+  private lastTapY = 0;
   /** Distância mínima do gesto, em pixels. */
   threshold = 28;
   enabled = true;
@@ -53,6 +66,11 @@ export class InputManager {
       case 'KeyP':
         a = 'pause';
         break;
+      case 'KeyE':
+      case 'ShiftLeft':
+      case 'ShiftRight':
+        a = 'boost';
+        break;
     }
     if (a) {
       if (!this.enabled && a !== 'pause') return;
@@ -70,6 +88,8 @@ export class InputManager {
     this.pointerId = e.pointerId;
     this.startX = e.clientX;
     this.startY = e.clientY;
+    this.downTime = e.timeStamp || performance.now();
+    this.maxMove = 0;
   };
 
   private onMove = (e: PointerEvent) => {
@@ -78,6 +98,7 @@ export class InputManager {
     const dy = e.clientY - this.startY;
     const adx = Math.abs(dx);
     const ady = Math.abs(dy);
+    this.maxMove = Math.max(this.maxMove, adx, ady);
     if (Math.max(adx, ady) < this.threshold) return;
     this.consumed = true;
     if (adx > ady) this.onAction(dx < 0 ? 'left' : 'right');
@@ -85,7 +106,25 @@ export class InputManager {
   };
 
   private onUp = (e: PointerEvent) => {
-    if (e.pointerId === this.pointerId) this.tracking = false;
+    if (e.pointerId !== this.pointerId || !this.tracking) return;
+    this.tracking = false;
+    if (!this.enabled || e.type !== 'pointerup') return;
+    // toque simples: curto e com o dedo quase parado (nunca um gesto de deslizar)
+    const now = e.timeStamp || performance.now();
+    const move = Math.max(this.maxMove, Math.abs(e.clientX - this.startX), Math.abs(e.clientY - this.startY));
+    if (this.consumed || move > TAP_MAX_MOVE || now - this.downTime > TAP_MAX_DURATION) {
+      this.lastTapEnd = -1e9;
+      return;
+    }
+    const near = Math.hypot(e.clientX - this.lastTapX, e.clientY - this.lastTapY) < DOUBLE_TAP_MAX_DISTANCE;
+    if (this.downTime - this.lastTapEnd <= DOUBLE_TAP_GAP && near) {
+      this.lastTapEnd = -1e9;
+      this.onAction('boost');
+      return;
+    }
+    this.lastTapEnd = now;
+    this.lastTapX = e.clientX;
+    this.lastTapY = e.clientY;
   };
 
   dispose(): void {

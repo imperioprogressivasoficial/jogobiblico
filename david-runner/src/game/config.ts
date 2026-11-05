@@ -38,6 +38,16 @@ export function speedForDistance(distance: number): number {
   return START_SPEED + (MAX_SPEED - START_SPEED) * (1 - Math.exp(-distance / SPEED_RAMP_DISTANCE));
 }
 
+/**
+ * Curva de velocidade com escala (modo Criança): `speedScale` reduz a velocidade e
+ * `rampScale` (> 1) faz a aceleração ao longo da corrida ser mais lenta.
+ * Com (1, 1) é idêntica a `speedForDistance`.
+ */
+export function scaledSpeedCurve(speedScale = 1, rampScale = 1): (distance: number) => number {
+  if (speedScale === 1 && rampScale === 1) return speedForDistance;
+  return (distance: number) => speedForDistance(distance / rampScale) * speedScale;
+}
+
 export function difficultyForDistance(distance: number): number {
   return Math.min(1, distance / 4500);
 }

@@ -103,6 +103,7 @@ export class ObstacleManager {
       box = { hw: spec.fullWidth ? 3.9 : 0.92, yMin: 0, yMax: LOW_HEIGHT[spec.variant] ?? OBSTACLE_HEIGHT.low };
     }
     mesh.position.set(x, 0, 0);
+    mesh.visible = true; // pode ter sido escondida (escudo/carruagem) antes de voltar ao pool
     mesh.rotation.set(0, spec.kind === 'animal' && vx < 0 ? Math.PI : 0, 0);
     this.root.add(mesh);
     this.active.push({ spec, mesh, x, vx, box, hit: false });

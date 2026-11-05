@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import type { GameEngine } from '../game/GameEngine';
+import { DIFFICULTY } from '../data/chariot';
 import { audio } from '../game/AudioManager';
 import { progression } from '../state/ProgressionManager';
 
@@ -14,7 +15,7 @@ export type Screen =
   | 'achievements'
   | 'missions'
   | 'settings'
-  | 'scrolls';
+  | 'journey';
 
 /** Navegação entre telas + acesso ao motor 3D compartilhado. */
 class UIManagerImpl {
@@ -23,6 +24,17 @@ class UIManagerImpl {
   private listeners = new Set<() => void>();
   engine: GameEngine | null = null;
   private engineWaiters: ((e: GameEngine) => void)[] = [];
+  /** Janelas abertas por cima da tela (ex.: leitor de história) que fecham com "voltar". */
+  private backHandlers: (() => void)[] = [];
+
+  /** Registra quem fecha com o botão "voltar" do Android; retorna a função para remover. */
+  pushBackHandler(fn: () => void): () => void {
+    this.backHandlers.push(fn);
+    return () => {
+      const i = this.backHandlers.lastIndexOf(fn);
+      if (i >= 0) this.backHandlers.splice(i, 1);
+    };
+  }
 
   subscribe = (fn: () => void) => {
     this.listeners.add(fn);
@@ -67,6 +79,11 @@ class UIManagerImpl {
    * Retorna false no menu principal (o app vai para segundo plano).
    */
   handleBack(): boolean {
+    const top = this.backHandlers[this.backHandlers.length - 1];
+    if (top) {
+      top();
+      return true;
+    }
     const e = this.engine;
     if (this.screen === 'game') {
       if (e && e.mode === 'playing') e.pause();
@@ -82,12 +99,16 @@ class UIManagerImpl {
     const e = this.engine;
     if (!e) return;
     const d = progression.data;
+    const diff = DIFFICULTY[d.settings.difficulty] ?? DIFFICULTY.crianca;
     e.startRun({
       mapId: d.selectedMap,
       characterId: d.selectedCharacter,
       skinId: d.selectedSkin[d.selectedCharacter] ?? 'padrao',
       baseMultiplier: progression.baseMultiplier,
       durations: progression.durations(),
+      chariot: { charges: progression.chariotCharges, duration: progression.chariotDuration() },
+      speedScale: diff.speedScale,
+      rampScale: diff.rampScale,
     });
     this.go('game', true);
   }

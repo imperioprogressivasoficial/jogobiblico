@@ -6,9 +6,9 @@ import { CharacterSelect } from './ui/screens/CharacterSelect';
 import { GameScreen } from './ui/screens/GameScreen';
 import { MainMenu } from './ui/screens/MainMenu';
 import { MapSelect } from './ui/screens/MapSelect';
+import { JourneyScreen } from './ui/screens/JourneyScreen';
 import { MissionsScreen } from './ui/screens/MissionsScreen';
 import { RecordsScreen } from './ui/screens/RecordsScreen';
-import { ScrollsScreen } from './ui/screens/ScrollsScreen';
 import { SettingsScreen } from './ui/screens/SettingsScreen';
 import { ShopScreen } from './ui/screens/ShopScreen';
 import { SplashScreen } from './ui/screens/SplashScreen';
@@ -29,7 +29,7 @@ export function App() {
         {screen === 'achievements' && <AchievementsScreen />}
         {screen === 'missions' && <MissionsScreen />}
         {screen === 'settings' && <SettingsScreen />}
-        {screen === 'scrolls' && <ScrollsScreen />}
+        {screen === 'journey' && <JourneyScreen />}
       </div>
       <Toasts />
     </div>

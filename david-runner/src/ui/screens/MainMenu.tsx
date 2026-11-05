@@ -11,6 +11,7 @@ export function MainMenu() {
   const char = getCharacter(d.selectedCharacter);
   const map = getMap(d.selectedMap);
   const claimable = d.missions.list.filter((m) => m.progress >= m.target && !m.claimed).length;
+  const unread = progression.unreadStories().length;
 
   useEffect(() => {
     progression.ensureDailyMissions();
@@ -24,7 +25,12 @@ export function MainMenu() {
   return (
     <div className="screen menu" data-testid="main-menu">
       <header className="menu-top">
-        <Currency />
+        <div className="menu-top-left">
+          <Currency />
+          <span className="pill pill-fire" title="Cargas da Carruagem de Fogo" data-testid="chariot-charges">
+            🔥 {d.chariot.charges}
+          </span>
+        </div>
         <Btn variant="wood" size="sm" onClick={() => UIManager.go('settings')} title="Configurações" testId="btn-settings">
           ⚙️
         </Btn>
@@ -54,12 +60,17 @@ export function MainMenu() {
         <Btn variant="wood" onClick={() => UIManager.go('records')} testId="btn-records">
           <span className="ico">📊</span>Recordes
         </Btn>
-        <Btn variant="wood" onClick={() => UIManager.go('scrolls')} testId="btn-scrolls">
-          <span className="ico">📜</span>Pergaminhos
-        </Btn>
       </div>
 
       <div className="menu-bottom">
+        <Btn variant="blue" size="lg" className="btn-journey" onClick={() => UIManager.go('journey')} testId="btn-journey">
+          <span className="ico">📖</span>Jornada Bíblica
+          {unread > 0 && (
+            <span className="badge badge-new" data-testid="journey-unread">
+              {unread}
+            </span>
+          )}
+        </Btn>
         <div className="menu-info">
           <span>
             <strong>{char.name}</strong> · {map.emoji} {map.name}

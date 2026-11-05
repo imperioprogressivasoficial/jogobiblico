@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { audio } from '../../game/AudioManager';
 import { CHARACTERS } from '../../data/characters';
+import { CHARIOT, chariotDuration } from '../../data/chariot';
 import { UPGRADES } from '../../data/progression';
 import { progression } from '../../state/ProgressionManager';
 import { Btn, CoinIcon, Progress, RelicIcon, TopBar } from '../components/common';
 import { UIManager, fmt, useProgress } from '../UIManager';
 
-type Tab = 'herois' | 'trajes' | 'melhorias';
+type Tab = 'herois' | 'trajes' | 'melhorias' | 'poderes';
 
 export function ShopScreen() {
   useProgress();
@@ -22,6 +23,7 @@ export function ShopScreen() {
             ['herois', 'Heróis'],
             ['trajes', 'Trajes'],
             ['melhorias', 'Melhorias'],
+            ['poderes', '🔥 Poderes'],
           ] as [Tab, string][]
         ).map(([id, label]) => (
           <button
@@ -128,6 +130,8 @@ export function ShopScreen() {
           </div>
         )}
 
+        {tab === 'poderes' && <PowersTab />}
+
         {tab === 'melhorias' && (
           <div className="shop-list">
             {UPGRADES.map((u) => {
@@ -166,6 +170,80 @@ export function ShopScreen() {
               );
             })}
           </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Aba "Poderes": cargas da Carruagem de Fogo e melhoria de duração. */
+function PowersTab() {
+  const d = progression.data;
+  const lvl = d.chariot.level;
+  const cost = progression.chariotUpgradeCost();
+  const full = d.chariot.charges >= CHARIOT.maxCharges;
+  return (
+    <div className="shop-list">
+      <div className="chariot-card">
+        <div className="chariot-card-art" aria-hidden="true">
+          🐎🔥🐎
+        </div>
+        <div>
+          <strong>Carruagem de Fogo</strong>
+          <p>
+            Toque <b>duas vezes</b> na tela durante a corrida (ou aperte <b>E</b>): você corre mais rápido, fica invencível e
+            atravessa tudo pelo caminho!
+          </p>
+          <small>“Eis que um carro de fogo, com cavalos de fogo...” — {CHARIOT.reference}</small>
+        </div>
+      </div>
+      <div className="shop-item">
+        <div className="shop-avatar emoji">🔥</div>
+        <div className="shop-info">
+          <strong>Carga da Carruagem</strong>
+          <small>
+            Você tem <b data-testid="shop-chariot-charges">{d.chariot.charges}</b> {d.chariot.charges === 1 ? 'carga' : 'cargas'}. Ganhe +1
+            a cada missão diária resgatada.
+          </small>
+        </div>
+        <Btn
+          variant="gold"
+          size="sm"
+          sfx={null}
+          disabled={d.coins < CHARIOT.chargeCost || full}
+          testId="buy-chariot-charge"
+          onClick={() => audio.play(progression.buyChariotCharge() ? 'buy' : 'error')}
+        >
+          <CoinIcon size={16} /> {fmt(CHARIOT.chargeCost)}
+        </Btn>
+      </div>
+      <div className="shop-item">
+        <div className="shop-avatar emoji">⏱️</div>
+        <div className="shop-info">
+          <strong>Duração da Carruagem</strong>
+          <small>
+            Duração: {chariotDuration(lvl).toLocaleString('pt-BR')} s
+            {cost !== null && <> → {chariotDuration(lvl + 1).toLocaleString('pt-BR')} s</>}
+          </small>
+          <div className="pips">
+            {CHARIOT.upgradeCosts.map((_, i) => (
+              <span key={i} className={`pip ${i < lvl ? 'on' : ''}`} />
+            ))}
+          </div>
+        </div>
+        {cost === null ? (
+          <span className="owned">Máximo</span>
+        ) : (
+          <Btn
+            variant="gold"
+            size="sm"
+            sfx={null}
+            disabled={d.coins < cost}
+            testId="upgrade-chariot"
+            onClick={() => audio.play(progression.buyChariotUpgrade() ? 'buy' : 'error')}
+          >
+            <CoinIcon size={16} /> {fmt(cost)}
+          </Btn>
         )}
       </div>
     </div>
