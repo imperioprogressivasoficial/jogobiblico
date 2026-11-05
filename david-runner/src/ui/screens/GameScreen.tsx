@@ -3,9 +3,12 @@ import { audio } from '../../game/AudioManager';
 import type { HudData, PowerType } from '../../game/GameEngine';
 import type { RunStats } from '../../game/ScoreManager';
 import { getMap } from '../../data/maps';
+import type { StoryEpisode } from '../../data/story';
 import { MISSION_POOL, REVIVE_COST } from '../../data/progression';
 import { progression, type RunSummary } from '../../state/ProgressionManager';
 import { Btn, CoinIcon, Progress } from '../components/common';
+import { StoryReader } from '../components/StoryReader';
+import { StoryScene, eraInfo } from '../components/StoryScene';
 import { UIManager, fmt, useProgress } from '../UIManager';
 
 type Phase = 'playing' | 'paused' | 'countdown' | 'revive' | 'results';
@@ -19,8 +22,9 @@ const POWER_INFO: Record<PowerType, { icon: string; name: string; color: string 
 const isTouch = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
 
 const HINTS = isTouch
-  ? ['Deslize ⟵ ⟶ para trocar de pista', 'Deslize para cima ↑ para pular', 'Deslize para baixo ↓ para deslizar', 'Colete moedas e pergaminhos!']
-  : ['Use ← → ou A / D para trocar de pista', '↑, W ou Espaço para pular', '↓ ou S para deslizar', 'Colete moedas e pergaminhos!'];
+  ? ['Deslize ⟵ ⟶ para trocar de pista', 'Deslize para cima ↑ para pular', 'Deslize para baixo ↓ para deslizar', 'Pegue 📜 pergaminhos para revelar histórias da Bíblia!']
+  : ['Use ← → ou A / D para trocar de pista', '↑, W ou Espaço para pular', '↓ ou S para deslizar', 'Pegue 📜 pergaminhos para revelar histórias da Bíblia!'];
+const CHARIOT_HINT = isTouch ? '🔥 Toque duas vezes na tela para chamar a Carruagem de Fogo!' : '🔥 Aperte E (ou toque duas vezes) para chamar a Carruagem de Fogo!';
 
 export function GameScreen() {
   useProgress();
@@ -30,6 +34,10 @@ export function GameScreen() {
   const [powers, setPowers] = useState<HudData['powers']>([]);
   const [banner, setBanner] = useState<{ id: number; text: string } | null>(null);
   const [hint, setHint] = useState<string | null>(null);
+  const [boost, setBoost] = useState<HudData['boost']>({ remaining: 0, total: 1, charges: progression.data.chariot.charges });
+  const [reading, setReading] = useState<StoryEpisode | null>(null);
+  const readingRef = useRef(false);
+  readingRef.current = !!reading;
   const [summary, setSummary] = useState<RunSummary | null>(null);
   const [reviveLeft, setReviveLeft] = useState(0);
   const revivesUsed = useRef(0);
@@ -45,19 +53,25 @@ export function GameScreen() {
 
   // HUD atualizado direto no DOM (sem re-render a cada quadro)
   useEffect(() => {
-    let last = { d: -1, s: -1, c: -1, m: -1, pk: '' };
+    let last = { d: -1, s: -1, c: -1, m: -1, pk: '', bk: '' };
     let tick = 0;
     return engine.onFrame((hud) => {
       if (hud.distance !== last.d && distRef.current) distRef.current.textContent = `${fmt(hud.distance)} m`;
       if (hud.score !== last.s && scoreRef.current) scoreRef.current.textContent = fmt(hud.score);
       if (hud.coins !== last.c && coinsRef.current) coinsRef.current.textContent = fmt(hud.coins);
       if (hud.multiplier !== last.m && multRef.current) multRef.current.textContent = `x${hud.multiplier}`;
-      last = { d: hud.distance, s: hud.score, c: hud.coins, m: hud.multiplier, pk: last.pk };
+      last = { d: hud.distance, s: hud.score, c: hud.coins, m: hud.multiplier, pk: last.pk, bk: last.bk };
       if (++tick % 6 === 0) {
         const key = hud.powers.map((p) => `${p.type}${Math.ceil(p.remaining * 4)}`).join();
         if (key !== last.pk) {
           last.pk = key;
           setPowers(hud.powers.map((p) => ({ ...p })));
+        }
+        const b = hud.boost;
+        const bk = `${b.charges}:${Math.ceil(b.remaining * 4)}`;
+        if (bk !== last.bk) {
+          last.bk = bk;
+          setBoost({ ...b });
         }
       }
     });
@@ -77,12 +91,25 @@ export function GameScreen() {
         }
       }),
       engine.on('pickup', (e) => {
-        if (e.type === 'scroll') showBanner('📜 Pergaminho encontrado!');
+        if (e.type === 'scroll') {
+          // cada pergaminho revela a próxima história (as desta corrida ainda não foram salvas)
+          const story = progression.nextLockedStory(Math.max(0, engine.score.run.scrolls - 1));
+          showBanner(story ? `📜 Nova história: ${story.title}!` : '📜 Pergaminho encontrado! +100 moedas');
+        }
         else if (e.type === 'relic') showBanner('💎 Relíquia rara encontrada!');
         else if (e.type !== 'coin') showBanner(`${POWER_INFO[e.type].icon} ${POWER_INFO[e.type].name}`);
       }),
       engine.on('stumble', () => showBanner('⚠️ Cuidado!')),
       engine.on('shieldBreak', () => showBanner('🛡️ O escudo te protegeu!')),
+      engine.on('boost', () => {
+        progression.useChariotCharge();
+        showBanner('🔥 Carruagem de Fogo!');
+        setBoost({ remaining: engine.chariot.remaining, total: engine.chariot.duration, charges: engine.chariot.charges });
+      }),
+      engine.on('boostDenied', () => {
+        audio.play('error');
+        showBanner('🔥 Sem cargas! Ganhe nas missões ou na loja.');
+      }),
       engine.on('mode', (m) => {
         if (m === 'paused') setPhase((p) => (p === 'playing' ? 'paused' : p));
       }),
@@ -97,7 +124,9 @@ export function GameScreen() {
     if (!(d.settings.showHints && d.stats.totalRuns < 3)) return;
     const timers: number[] = [];
     HINTS.forEach((h, i) => timers.push(window.setTimeout(() => setHint(h), 400 + i * 2600)));
-    timers.push(window.setTimeout(() => setHint(null), 400 + HINTS.length * 2600));
+    // por último, a Carruagem de Fogo (fica um pouco mais na tela)
+    timers.push(window.setTimeout(() => setHint(CHARIOT_HINT), 400 + HINTS.length * 2600));
+    timers.push(window.setTimeout(() => setHint(null), 400 + HINTS.length * 2600 + 4200));
     return () => timers.forEach((t) => clearTimeout(t));
   }, [runId]);
 
@@ -153,6 +182,7 @@ export function GameScreen() {
   // teclado nas telas de pausa
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (readingRef.current) return;
       if (phase === 'paused' && (e.code === 'Escape' || e.code === 'KeyP')) resumeGame();
       else if (phase === 'results' && e.code === 'Enter') restart();
     };
@@ -204,8 +234,10 @@ export function GameScreen() {
     setRunId((r) => r + 1);
     setSummary(null);
     setPowers([]);
+    setReading(null);
     setPhase('playing');
     UIManager.startRun();
+    setBoost({ remaining: 0, total: engine.chariot.duration, charges: engine.chariot.charges });
   }
 
   function toMenu() {
@@ -220,6 +252,8 @@ export function GameScreen() {
 
   const s = progression.data.settings;
   const cost = REVIVE_COST[revivesUsed.current] ?? 0;
+  const boostActive = boost.remaining > 0;
+  const boostPct = boostActive ? Math.max(0, Math.min(1, boost.remaining / boost.total)) : 0;
 
   return (
     <div className="screen game" data-testid="game-screen">
@@ -249,6 +283,14 @@ export function GameScreen() {
       </div>
 
       <div className="hud-powers">
+        {boostActive && phase !== 'results' && (
+          <div className="power-chip power-chip-fire" data-testid="boost-bar">
+            <span>🔥</span>
+            <div className="power-bar">
+              <div style={{ width: `${boostPct * 100}%` }} />
+            </div>
+          </div>
+        )}
         {powers.map((p) => (
           <div key={p.type} className="power-chip" style={{ borderColor: POWER_INFO[p.type].color }}>
             <span>{POWER_INFO[p.type].icon}</span>
@@ -258,6 +300,30 @@ export function GameScreen() {
           </div>
         ))}
       </div>
+
+      {boostActive && phase === 'playing' && <div className="boost-vignette" aria-hidden="true" />}
+
+      {(phase === 'playing' || phase === 'countdown') && (
+        <button
+          type="button"
+          className={`chariot-btn ${boostActive ? 'active' : ''} ${boost.charges <= 0 && !boostActive ? 'empty' : ''} ${hint === CHARIOT_HINT ? 'hinting' : ''}`}
+          style={boostActive ? { background: `conic-gradient(#ffd23f ${boostPct * 360}deg, rgba(60, 20, 4, 0.75) 0deg)` } : undefined}
+          data-testid="btn-chariot"
+          aria-label={`Carruagem de Fogo: ${boost.charges} cargas`}
+          disabled={phase !== 'playing'}
+          onClick={() => {
+            audio.unlock();
+            engine.activateBoost();
+          }}
+        >
+          <span className="chariot-btn-inner">
+            <span className="chariot-btn-icon">🔥</span>
+            <span className="chariot-btn-count" data-testid="hud-chariot-charges">
+              {boost.charges}
+            </span>
+          </span>
+        </button>
+      )}
 
       {banner && phase === 'playing' && (
         <div key={banner.id} className="game-banner">
@@ -345,12 +411,23 @@ export function GameScreen() {
       )}
 
       {/* FIM DE PARTIDA */}
-      {phase === 'results' && summary && <Results summary={summary} onRestart={restart} onMenu={toMenu} />}
+      {phase === 'results' && summary && <Results summary={summary} onRestart={restart} onMenu={toMenu} onRead={setReading} />}
+      {reading && <StoryReader story={reading} onClose={() => setReading(null)} />}
     </div>
   );
 }
 
-function Results({ summary, onRestart, onMenu }: { summary: RunSummary; onRestart: () => void; onMenu: () => void }) {
+function Results({
+  summary,
+  onRestart,
+  onMenu,
+  onRead,
+}: {
+  summary: RunSummary;
+  onRestart: () => void;
+  onMenu: () => void;
+  onRead: (s: StoryEpisode) => void;
+}) {
   const st = summary.stats;
   const map = getMap(st.mapId);
   return (
@@ -385,15 +462,22 @@ function Results({ summary, onRestart, onMenu }: { summary: RunSummary; onRestar
           </div>
         </div>
 
-        {summary.newScrolls.map((s) => (
-          <div key={s.id} className="scroll-card scroll-new">
-            <div className="scroll-tag">📜 Novo pergaminho</div>
-            <strong>{s.title}</strong>
-            <p>{s.text}</p>
-            <em>{s.reference}</em>
+        {summary.newStories.map((s) => (
+          <div key={s.id} className="new-story" data-testid={`new-story-${s.id}`} style={{ borderColor: eraInfo(s.era).color }}>
+            <StoryScene story={s} size="card" />
+            <div className="new-story-info">
+              <div className="new-story-tag">📜 Nova história revelada!</div>
+              <strong>{s.title}</strong>
+              <small>
+                {eraInfo(s.era).emoji} {s.era} · {s.reference}
+              </small>
+              <Btn variant="gold" size="md" onClick={() => onRead(s)} testId={`read-${s.id}`}>
+                📖 Ler a história
+              </Btn>
+            </div>
           </div>
         ))}
-        {summary.scrollCoins > 0 && <p className="results-note">Todos os pergaminhos já foram encontrados: +{summary.scrollCoins} moedas!</p>}
+        {summary.scrollCoins > 0 && <p className="results-note">Você já revelou todas as histórias: +{summary.scrollCoins} moedas!</p>}
 
         {(summary.unlockedCharacters.length > 0 || summary.unlockedMaps.length > 0) && (
           <div className="results-unlocks">

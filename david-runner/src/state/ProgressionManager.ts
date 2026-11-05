@@ -10,7 +10,8 @@ import {
   type StatKey,
   type UpgradeDef,
 } from '../data/progression';
-import { SCROLLS, type ScrollDef } from '../data/scrolls';
+import { CHARIOT, chariotDuration, type Difficulty } from '../data/chariot';
+import { STORY, type StoryEpisode } from '../data/story';
 import type { RunStats } from '../game/ScoreManager';
 import { Rng, hashString } from '../game/rng';
 
@@ -21,6 +22,8 @@ export interface Settings {
   quality: 'auto' | 'alta' | 'media' | 'baixa';
   vibration: boolean;
   showHints: boolean;
+  /** Criança (padrão): corrida mais lenta e calma. */
+  difficulty: Difficulty;
 }
 
 export interface RunRecord {
@@ -43,9 +46,18 @@ export interface SaveData {
   version: 1;
   coins: number;
   relics: number;
-  stats: Record<Exclude<StatKey, 'charactersOwned' | 'mapsUnlocked'>, number>;
+  stats: Record<Exclude<StatKey, ComputedStat>, number>;
   bestByMap: Record<string, number>;
+  /** Ids das histórias da Jornada Bíblica já reveladas (cada pergaminho revela a próxima). */
   scrolls: string[];
+  /** Pergaminhos guardados que ainda não viraram história (ex.: salvamentos antigos). */
+  storyCredits: number;
+  /** Histórias lidas até o fim. */
+  storiesRead: string[];
+  /** Quizzes acertados (as moedas do quiz são dadas só na primeira vez). */
+  storyQuizzes: string[];
+  /** Carruagem de Fogo: cargas guardadas e nível da melhoria de duração. */
+  chariot: { charges: number; level: number };
   characters: string[];
   selectedCharacter: string;
   skins: Record<string, string[]>;
@@ -64,7 +76,8 @@ export interface RunSummary {
   stats: RunStats;
   isBestScore: boolean;
   isBestDistance: boolean;
-  newScrolls: ScrollDef[];
+  /** Histórias reveladas pelos pergaminhos desta corrida. */
+  newStories: StoryEpisode[];
   newAchievements: AchievementDef[];
   completedMissions: string[];
   unlockedCharacters: CharacterDef[];
@@ -73,6 +86,9 @@ export interface RunSummary {
 }
 
 const KEY = 'davidrunner.save.v1';
+/** Moedas por acertar o quiz de uma história (só na primeira vez). */
+export const STORY_QUIZ_REWARD = 50;
+type ComputedStat = 'charactersOwned' | 'mapsUnlocked' | 'storiesUnlocked' | 'storiesRead' | 'quizzesDone';
 
 function today(): string {
   const d = new Date();
@@ -97,9 +113,14 @@ function defaults(): SaveData {
       bestScore: 0,
       bestCoinsRun: 0,
       missionSets: 0,
+      totalBoosts: 0,
     },
     bestByMap: {},
     scrolls: [],
+    storyCredits: 0,
+    storiesRead: [],
+    storyQuizzes: [],
+    chariot: { charges: CHARIOT.startCharges, level: 0 },
     characters: ['davi'],
     selectedCharacter: 'davi',
     skins: Object.fromEntries(CHARACTERS.map((c) => [c.id, ['padrao']])),
@@ -110,7 +131,7 @@ function defaults(): SaveData {
     achievements: {},
     missions: { day: '', list: [], multiplierLevel: 0, setClaimed: false },
     records: [],
-    settings: { music: 0.6, sfx: 0.8, sensitivity: 'media', quality: 'auto', vibration: true, showHints: true },
+    settings: { music: 0.6, sfx: 0.8, sensitivity: 'media', quality: 'auto', vibration: true, showHints: true, difficulty: 'crianca' },
     tutorialDone: false,
   };
 }
@@ -123,7 +144,36 @@ function merge(base: SaveData, loaded: Partial<SaveData>): SaveData {
   out.skins = { ...base.skins, ...(loaded.skins ?? {}) };
   out.selectedSkin = { ...base.selectedSkin, ...(loaded.selectedSkin ?? {}) };
   out.missions = { ...base.missions, ...(loaded.missions ?? {}) };
+  out.chariot = { ...base.chariot, ...(loaded.chariot ?? {}) };
+  migrateStories(out);
   return out;
+}
+
+const STORY_IDS = new Set(STORY.map((s) => s.id));
+
+/**
+ * Mantém `scrolls` como a lista de histórias reveladas, em ordem cronológica.
+ * Ids que não são histórias (as antigas curiosidades "s01".."s24", ou histórias
+ * renomeadas) viram créditos: quem tinha N curiosidades recebe as N primeiras histórias.
+ * Créditos que sobram ficam guardados até novas histórias serem publicadas.
+ */
+export function migrateStories(d: SaveData): void {
+  const list = Array.isArray(d.scrolls) ? d.scrolls : [];
+  const known = new Set(list.filter((id) => STORY_IDS.has(id)));
+  let credits = Math.max(0, Math.floor(d.storyCredits ?? 0)) + new Set(list.filter((id) => !STORY_IDS.has(id))).size;
+  for (const s of STORY) {
+    if (credits <= 0) break;
+    if (!known.has(s.id)) {
+      known.add(s.id);
+      credits--;
+    }
+  }
+  d.scrolls = STORY.filter((s) => known.has(s.id)).map((s) => s.id);
+  d.storyCredits = credits;
+  d.storiesRead = (Array.isArray(d.storiesRead) ? d.storiesRead : []).filter((id) => STORY_IDS.has(id));
+  d.storyQuizzes = (Array.isArray(d.storyQuizzes) ? d.storyQuizzes : []).filter((id) => STORY_IDS.has(id));
+  d.chariot.charges = Math.max(0, Math.min(CHARIOT.maxCharges, Math.floor(d.chariot.charges || 0)));
+  d.chariot.level = Math.max(0, Math.min(CHARIOT.upgradeCosts.length, Math.floor(d.chariot.level || 0)));
 }
 
 /**
@@ -262,6 +312,7 @@ export class ProgressionManager {
     const t = MISSION_POOL.find((x) => x.id === ms.templateId)!;
     ms.claimed = true;
     this.data.coins += t.reward;
+    this.data.chariot.charges = Math.min(CHARIOT.maxCharges, this.data.chariot.charges + 1);
     const m = this.data.missions;
     if (!m.setClaimed && m.list.every((x) => x.claimed)) {
       m.setClaimed = true;
@@ -279,6 +330,9 @@ export class ProgressionManager {
   statValue(stat: StatKey): number {
     if (stat === 'charactersOwned') return this.data.characters.length;
     if (stat === 'mapsUnlocked') return this.data.maps.length;
+    if (stat === 'storiesUnlocked') return this.data.scrolls.length;
+    if (stat === 'storiesRead') return this.data.storiesRead.length;
+    if (stat === 'quizzesDone') return this.data.storyQuizzes.length;
     return this.data.stats[stat];
   }
 
@@ -315,13 +369,16 @@ export class ProgressionManager {
           label: `Alcance ${u.meters.toLocaleString('pt-BR')} m em uma corrida`,
           progress: Math.min(1, this.data.stats.bestDistance / u.meters),
         };
-      case 'scrolls':
+      case 'scrolls': {
+        // pergaminhos encontrados (cada um revela uma história da Jornada Bíblica)
+        const found = Math.max(this.data.scrolls.length, this.data.stats.totalScrolls);
         return {
           owned,
-          canUnlock: this.data.scrolls.length >= u.count,
+          canUnlock: found >= u.count,
           label: `Encontre ${u.count} pergaminhos`,
-          progress: Math.min(1, this.data.scrolls.length / u.count),
+          progress: Math.min(1, found / u.count),
         };
+      }
     }
   }
 
@@ -416,6 +473,78 @@ export class ProgressionManager {
     return true;
   }
 
+  // ------------------------------------------------------------ Carruagem de Fogo
+  get chariotCharges(): number {
+    return this.data.chariot.charges;
+  }
+
+  chariotDuration(): number {
+    return chariotDuration(this.data.chariot.level);
+  }
+
+  chariotUpgradeCost(): number | null {
+    const lvl = this.data.chariot.level;
+    return lvl >= CHARIOT.upgradeCosts.length ? null : CHARIOT.upgradeCosts[lvl];
+  }
+
+  buyChariotCharge(): boolean {
+    if (this.data.coins < CHARIOT.chargeCost || this.data.chariot.charges >= CHARIOT.maxCharges) return false;
+    this.data.coins -= CHARIOT.chargeCost;
+    this.data.chariot.charges++;
+    this.commit();
+    return true;
+  }
+
+  buyChariotUpgrade(): boolean {
+    const cost = this.chariotUpgradeCost();
+    if (cost === null || this.data.coins < cost) return false;
+    this.data.coins -= cost;
+    this.data.chariot.level++;
+    this.commit();
+    return true;
+  }
+
+  /** Gasta 1 carga (chamado quando a carruagem é ativada na corrida). */
+  useChariotCharge(): void {
+    if (this.data.chariot.charges <= 0) return;
+    this.data.chariot.charges--;
+    this.commit();
+  }
+
+  // ------------------------------------------------------------ Jornada Bíblica
+  isStoryUnlocked(id: string): boolean {
+    return this.data.scrolls.includes(id);
+  }
+
+  /** A história que o `offset`-ésimo próximo pergaminho vai revelar (0 = o próximo). */
+  nextLockedStory(offset = 0): StoryEpisode | null {
+    const locked = STORY.filter((s) => !this.data.scrolls.includes(s.id));
+    return locked[offset] ?? null;
+  }
+
+  /** Histórias reveladas que ainda não foram lidas. */
+  unreadStories(): StoryEpisode[] {
+    return STORY.filter((s) => this.data.scrolls.includes(s.id) && !this.data.storiesRead.includes(s.id));
+  }
+
+  markStoryRead(id: string): void {
+    if (!STORY_IDS.has(id) || this.data.storiesRead.includes(id)) return;
+    this.data.storiesRead.push(id);
+    this.checkAchievements();
+    this.commit();
+  }
+
+  /** Quiz acertado: +50 moedas só na primeira vez. Retorna as moedas ganhas. */
+  completeStoryQuiz(id: string): number {
+    if (!STORY_IDS.has(id) || this.data.storyQuizzes.includes(id)) return 0;
+    this.data.storyQuizzes.push(id);
+    if (!this.data.storiesRead.includes(id)) this.data.storiesRead.push(id);
+    this.data.coins += STORY_QUIZ_REWARD;
+    this.checkAchievements();
+    this.commit();
+    return STORY_QUIZ_REWARD;
+  }
+
   spendCoins(n: number): boolean {
     if (this.data.coins < n) return false;
     this.data.coins -= n;
@@ -459,18 +588,21 @@ export class ProgressionManager {
     d.coins += run.coins;
     d.relics += run.relics;
 
-    // pergaminhos: cada um revela a próxima curiosidade
-    const newScrolls: ScrollDef[] = [];
+    st.totalBoosts += run.boosts ?? 0;
+
+    // pergaminhos: cada um revela a próxima história da Jornada Bíblica
+    const newStories: StoryEpisode[] = [];
     let scrollCoins = 0;
     for (let i = 0; i < run.scrolls; i++) {
-      const next = SCROLLS.find((s) => !d.scrolls.includes(s.id));
+      const next = STORY.find((s) => !d.scrolls.includes(s.id));
       if (next) {
         d.scrolls.push(next.id);
-        newScrolls.push(next);
+        newStories.push(next);
       } else {
         scrollCoins += 100;
       }
     }
+    d.scrolls = STORY.filter((s) => d.scrolls.includes(s.id)).map((s) => s.id);
     d.coins += scrollCoins;
 
     // missões
@@ -514,7 +646,7 @@ export class ProgressionManager {
       stats: run,
       isBestScore,
       isBestDistance,
-      newScrolls,
+      newStories,
       newAchievements,
       completedMissions,
       unlockedCharacters,

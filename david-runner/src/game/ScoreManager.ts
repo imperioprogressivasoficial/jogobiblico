@@ -12,6 +12,10 @@ export interface RunStats {
   slides: number;
   laneChanges: number;
   stumbles: number;
+  /** Vezes que a Carruagem de Fogo foi chamada. */
+  boosts: number;
+  /** Obstáculos destruídos pela Carruagem de Fogo. */
+  smashed: number;
   time: number;
   baseMultiplier: number;
   revived: boolean;
@@ -31,6 +35,8 @@ export function emptyRun(mapId: string, characterId: string, baseMultiplier: num
     slides: 0,
     laneChanges: 0,
     stumbles: 0,
+    boosts: 0,
+    smashed: 0,
     time: 0,
     baseMultiplier,
     revived: false,

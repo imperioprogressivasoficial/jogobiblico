@@ -1,10 +1,13 @@
 import * as THREE from 'three';
 import { getMap, type MapDef } from '../data/maps';
 import { vibrate } from '../platform/native';
+import { CHARIOT } from '../data/chariot';
 import { audio } from './AudioManager';
+import { BoostEffect } from './BoostEffect';
 import { CameraController } from './CameraController';
+import { ChariotPower } from './ChariotPower';
 import { CollectibleManager, type PickupEvent } from './CollectibleManager';
-import { DESPAWN_BEHIND, LANE_X, SPAWN_AHEAD, speedForDistance } from './config';
+import { DESPAWN_BEHIND, LANE_X, SPAWN_AHEAD, scaledSpeedCurve, speedForDistance } from './config';
 import { EnvironmentManager } from './EnvironmentManager';
 import { InputManager, type GameAction } from './InputManager';
 import { ObstacleManager } from './ObstacleManager';
@@ -26,6 +29,12 @@ export interface RunOptions {
   /** Duração (s) de cada power-up, conforme as melhorias compradas. */
   durations: Record<PowerType, number>;
   seed?: number;
+  /** Carruagem de Fogo: cargas disponíveis e duração (s). Sem isso, 0 cargas. */
+  chariot?: { charges: number; duration: number };
+  /** Escala de velocidade (modo Criança < 1). Padrão 1 = Normal. */
+  speedScale?: number;
+  /** Escala da distância de aceleração (> 1 = acelera mais devagar). Padrão 1. */
+  rampScale?: number;
 }
 
 export interface HudData {
@@ -35,6 +44,8 @@ export interface HudData {
   multiplier: number;
   speed: number;
   powers: { type: PowerType; remaining: number; total: number }[];
+  /** Carruagem de Fogo: tempo restante, duração total e cargas da corrida. */
+  boost: { remaining: number; total: number; charges: number };
 }
 
 type EngineEvents = {
@@ -43,6 +54,11 @@ type EngineEvents = {
   stumble: () => void;
   shieldBreak: () => void;
   mode: (m: EngineMode) => void;
+  /** Carruagem de Fogo ativada (gastou 1 carga). */
+  boost: () => void;
+  boostEnd: () => void;
+  /** Pediu a carruagem sem cargas. */
+  boostDenied: () => void;
 };
 
 /**
@@ -60,6 +76,8 @@ export class GameEngine {
   readonly player: PlayerController;
   readonly score = new ScoreManager();
   readonly input: InputManager;
+  readonly chariot = new ChariotPower();
+  readonly boostFx: BoostEffect;
   mode: EngineMode = 'menu';
   distance = 0;
   speed = 0;
@@ -79,6 +97,9 @@ export class GameEngine {
     stumble: [],
     shieldBreak: [],
     mode: [],
+    boost: [],
+    boostEnd: [],
+    boostDenied: [],
   };
   private frameListeners: ((hud: HudData) => void)[] = [];
   private runTime = 0;
@@ -99,7 +120,9 @@ export class GameEngine {
   private menuTime = 0;
   private resizeObs: ResizeObserver;
   private disposed = false;
-  private hud: HudData = { distance: 0, score: 0, coins: 0, multiplier: 1, speed: 0, powers: [] };
+  private hud: HudData = { distance: 0, score: 0, coins: 0, multiplier: 1, speed: 0, powers: [], boost: { remaining: 0, total: 1, charges: 0 } };
+  /** Curva de velocidade da corrida atual (Normal ou Criança). */
+  private speedAt: (d: number) => number = speedForDistance;
 
   constructor(private canvas: HTMLCanvasElement, inputTarget: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
@@ -112,6 +135,7 @@ export class GameEngine {
     this.particles = new ParticleSystem(this.scene);
     this.collectibles = new CollectibleManager(this.scene, this.particles);
     this.player = new PlayerController(this.scene, 'davi', 'padrao');
+    this.boostFx = new BoostEffect(this.scene);
     this.player.onEvent = (e) => {
       if (this.mode !== 'playing') return;
       const r = this.score.run;
@@ -219,6 +243,7 @@ export class GameEngine {
 
   // ------------------------------------------------------------- telas
   showMenu(view: 'menu' | 'showcase' = 'menu'): void {
+    this.stopChariot();
     this.obstacles.reset();
     this.collectibles.reset();
     this.particles.clear();
@@ -238,6 +263,9 @@ export class GameEngine {
   }
 
   startRun(opts: RunOptions): void {
+    this.stopChariot();
+    this.chariot.configure(opts.chariot?.charges ?? 0, opts.chariot?.duration ?? CHARIOT.baseDuration);
+    this.speedAt = scaledSpeedCurve(opts.speedScale ?? 1, opts.rampScale ?? 1);
     this.setMap(opts.mapId);
     this.setCharacter(opts.characterId, opts.skinId);
     this.durations = { ...opts.durations };
@@ -259,7 +287,7 @@ export class GameEngine {
       obstacle: (o) => this.obstacles.spawn(o),
       collectible: (c) => this.collectibles.spawn(c),
     });
-    this.generator.generateUntil(SPAWN_AHEAD, speedForDistance);
+    this.generator.generateUntil(SPAWN_AHEAD, this.speedAt);
     this.cameraCtl.setMode('follow');
     this.setMode('playing');
     audio.playMusic('game');
@@ -267,6 +295,7 @@ export class GameEngine {
 
   pause(): void {
     if (this.mode !== 'playing') return;
+    audio.setBoostLoop(false);
     this.setMode('paused');
     audio.setPaused(true);
   }
@@ -290,7 +319,7 @@ export class GameEngine {
     this.player.invulnerable = 2.5;
     this.player.animator.setState('run');
     this.cameraCtl.setMode('follow');
-    this.speed = speedForDistance(this.distance) * 0.6;
+    this.speed = this.speedAt(this.distance) * 0.6;
     this.setMode('playing');
     audio.setPaused(false);
     audio.playMusic('game');
@@ -313,6 +342,50 @@ export class GameEngine {
     else if (a === 'right') p.moveLane(1);
     else if (a === 'jump') p.jump();
     else if (a === 'slide') p.slide();
+    else if (a === 'boost') this.activateBoost();
+  }
+
+  // ------------------------------------------------------------- Carruagem de Fogo
+  /** Chama a Carruagem de Fogo (toque duplo, tecla E ou botão do HUD). */
+  activateBoost(): boolean {
+    if (this.mode !== 'playing') return false;
+    if (!this.chariot.activate()) {
+      if (this.chariot.charges <= 0 && !this.chariot.active) this.emit('boostDenied');
+      return false;
+    }
+    this.score.run.boosts++;
+    this.boostFx.pulse();
+    this.cameraCtl.addShake(0.35);
+    audio.play('chariot');
+    this.emit('boost');
+    return true;
+  }
+
+  private stopChariot(): void {
+    this.chariot.stop();
+    this.boostFx.reset();
+    audio.setBoostLoop(false);
+  }
+
+  /** Durante a carruagem, os obstáculos no caminho são arremessados em vez de bater. */
+  private smashObstacles(): void {
+    const p = this.player;
+    const box = { x: p.x, y: 0, height: 3.4, hw: 0.8, hd: 0.9 };
+    for (let k = 0; k < 6; k++) {
+      const hit = this.obstacles.checkCollision(box, this.distance, false);
+      if (!hit) return;
+      const o = hit.obstacle;
+      o.hit = true;
+      const z = o.mesh.position.z;
+      this.boostFx.fling(o.mesh, o.mesh.position.x, z, p.x);
+      o.mesh.visible = false;
+      this.particles.burst(o.mesh.position.x, 0.9, z, '#ffb02e', 16, 6, 3);
+      this.particles.burst(o.mesh.position.x, 0.6, z, '#ff5a1f', 8, 4, 2);
+      this.cameraCtl.addShake(0.22);
+      this.score.run.smashed++;
+      this.score.addBonus(20);
+      audio.play('smash');
+    }
   }
 
   /** Permite que a interface envie comandos (ex.: botões de teste). */
@@ -353,6 +426,7 @@ export class GameEngine {
       this.particles.update(dt, 0);
     }
     this.cameraCtl.update(dt, this.player.x, this.player.y);
+    this.boostFx.applyCamera(this.cameraCtl.camera, dt);
     this.renderer.render(this.scene, this.cameraCtl.camera);
 
     if (this.frameListeners.length && (this.mode === 'playing' || this.mode === 'paused' || this.mode === 'crashed')) {
@@ -373,6 +447,9 @@ export class GameEngine {
       const p = this.powers[t];
       if (p.remaining > 0) this.hud.powers.push({ type: t, remaining: p.remaining, total: p.total });
     }
+    this.hud.boost.remaining = this.chariot.remaining;
+    this.hud.boost.total = this.chariot.duration;
+    this.hud.boost.charges = this.chariot.charges;
   }
 
   private step(dt: number): void {
@@ -386,6 +463,7 @@ export class GameEngine {
       this.obstacles.update(this.distance, dt);
       this.env.update(dd, dt);
       this.particles.update(dt, dd);
+      this.boostFx.update(dt, dd, 0, p.x, p.y, p.sliding, this.speed);
       if (this.crashTimer <= 0) {
         this.setMode('over');
         this.emit('gameover', this.getRunStats());
@@ -394,14 +472,21 @@ export class GameEngine {
     }
 
     this.runTime += dt;
-    const target = speedForDistance(this.distance);
+    // Carruagem de Fogo: tempo, velocidade extra e proteção final
+    if (this.chariot.update(dt) === 'ended') {
+      p.invulnerable = Math.max(p.invulnerable, CHARIOT.tailProtection);
+      audio.play('chariotEnd');
+      this.emit('boostEnd');
+    }
+    audio.setBoostLoop(this.chariot.active);
+    const target = this.speedAt(this.distance) * this.chariot.speedMul;
     const ramp = Math.min(1, this.runTime / 1.2);
     this.speed += (target * (0.35 + 0.65 * ramp) - this.speed) * Math.min(1, dt * 4);
     const dd = this.speed * dt;
     this.distance += dd;
     this.score.addDistance(dd, dt);
 
-    this.generator!.generateUntil(this.distance + SPAWN_AHEAD, speedForDistance);
+    this.generator!.generateUntil(this.distance + SPAWN_AHEAD, this.speedAt);
     this.generator!.prune(this.distance);
 
     if (this.autopilot) this.runAutopilot();
@@ -410,6 +495,7 @@ export class GameEngine {
     this.obstacles.update(this.distance, dt);
     this.env.update(dd, dt);
     this.particles.update(dt, dd);
+    this.boostFx.update(dt, dd, this.chariot.intensity, p.x, p.y, p.sliding, this.speed);
 
     // power-ups
     for (const t of ['magnet', 'double', 'shield'] as PowerType[]) {
@@ -427,12 +513,15 @@ export class GameEngine {
     // coleta
     const box = p.getBox();
     this.pickups.length = 0;
-    this.collectibles.update(this.distance, dt, p.x, p.y, box.height, this.powers.magnet.remaining > 0, this.pickups);
+    const magnet = this.powers.magnet.remaining > 0 || this.chariot.active;
+    this.collectibles.update(this.distance, dt, p.x, p.y, box.height, magnet, this.pickups);
     for (const e of this.pickups) this.handlePickup(e);
 
     // colisão
     if (this.sideCooldown > 0) this.sideCooldown -= dt;
-    if (p.invulnerable <= 0 && !this.godMode) {
+    if (this.chariot.shielding) {
+      this.smashObstacles();
+    } else if (p.invulnerable <= 0 && !this.godMode) {
       const hit = this.obstacles.checkCollision(box, this.distance, p.laneMoving);
       if (hit) {
         if (hit.side) {
@@ -468,6 +557,7 @@ export class GameEngine {
   }
 
   private crash(): void {
+    audio.setBoostLoop(false);
     this.player.crash();
     this.cameraCtl.addShake(1);
     this.cameraCtl.setMode('crash');

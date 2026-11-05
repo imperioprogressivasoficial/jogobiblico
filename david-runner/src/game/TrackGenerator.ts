@@ -96,7 +96,8 @@ export class TrackGenerator {
   ) {
     this.cursor = startDistance;
     this.prevEnd = 8;
-    this.nextScroll = rng.range(260, 420);
+    // o primeiro pergaminho vem cedo: a primeira corrida já revela uma história
+    this.nextScroll = rng.range(110, 150);
     this.nextPower = rng.range(160, 260);
     this.nextRelic = rng.range(900, 1500);
   }
@@ -283,7 +284,7 @@ export class TrackGenerator {
         return 'relic';
       }
       if (mid >= this.nextScroll) {
-        this.nextScroll = mid + this.rng.range(380, 620);
+        this.nextScroll = mid + this.rng.range(250, 420);
         return 'scroll';
       }
       if (mid >= this.nextPower) {

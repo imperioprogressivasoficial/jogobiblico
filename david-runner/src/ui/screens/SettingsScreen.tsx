@@ -69,6 +69,27 @@ export function SettingsScreen() {
         </section>
 
         <section className="settings-group">
+          <h3 className="section-title">Jogo</h3>
+          <div className="setting-row">
+            <span>Dificuldade</span>
+            <Segmented
+              value={s.difficulty}
+              options={[
+                ['crianca', '🧒 Criança'],
+                ['normal', 'Normal'],
+              ]}
+              onChange={(v) => set({ difficulty: v })}
+              testId="difficulty"
+            />
+          </div>
+          <small className="muted">
+            {s.difficulty === 'crianca'
+              ? 'Modo Criança: a corrida é mais lenta e acelera com calma. Ótimo para os pequenos!'
+              : 'Modo Normal: a corrida fica mais rápida e desafiadora.'}
+          </small>
+        </section>
+
+        <section className="settings-group">
           <h3 className="section-title">Controles</h3>
           <div className="setting-row">
             <span>Sensibilidade do gesto</span>
@@ -112,6 +133,7 @@ export function SettingsScreen() {
                 <li>Deslize ← → para trocar de pista</li>
                 <li>Deslize ↑ para pular</li>
                 <li>Deslize ↓ para deslizar (no ar, desce rápido)</li>
+                <li>Toque duas vezes: Carruagem de Fogo 🔥</li>
               </ul>
             </div>
             <div>
@@ -120,6 +142,7 @@ export function SettingsScreen() {
                 <li>← → ou A / D: trocar de pista</li>
                 <li>↑, W ou Espaço: pular</li>
                 <li>↓ ou S: deslizar</li>
+                <li>E ou Shift: Carruagem de Fogo 🔥</li>
                 <li>Esc ou P: pausar</li>
               </ul>
             </div>
