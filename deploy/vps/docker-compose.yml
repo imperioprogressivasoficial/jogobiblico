@@ -1,0 +1,83 @@
+# DAVID RUNNER na VPS: jogo web (HTTPS via Traefik) + servidor Expo para o Expo Go.
+services:
+  uploader:
+    # recebe pacotes .tar.gz autenticados por token e extrai nos volumes
+    image: node:22-alpine
+    restart: unless-stopped
+    environment:
+      - UPLOAD_TOKEN=${UPLOAD_TOKEN}
+    volumes:
+      - dr-site:/data/site
+      - dr-expo:/data/expo
+    command:
+      - node
+      - -e
+      - |
+        const http = require('http'), fs = require('fs'), { execFileSync } = require('child_process');
+        const T = process.env.UPLOAD_TOKEN;
+        http.createServer((q, s) => {
+          const m = q.url.match(/^\/david-runner-upload\/(site|expo)$/);
+          if (!m || q.method !== 'PUT' || !T || q.headers['x-token'] !== T) { s.writeHead(403); return s.end('negado'); }
+          const tmp = '/tmp/' + m[1] + '.tgz';
+          const w = fs.createWriteStream(tmp);
+          q.pipe(w);
+          w.on('finish', () => {
+            try {
+              const d = '/data/' + m[1];
+              execFileSync('tar', ['xzf', tmp, '-C', d]);
+              fs.writeFileSync(d + '/.uploaded', String(Date.now()));
+              s.end('ok ' + m[1]);
+            } catch (e) { s.writeHead(500); s.end(String(e)); }
+          });
+        }).listen(8099, () => console.log('uploader pronto'));
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.dr-upload.rule=Host(`srv1969277.hstgr.cloud`) && PathPrefix(`/david-runner-upload`)
+      - traefik.http.routers.dr-upload.entrypoints=websecure
+      - traefik.http.routers.dr-upload.tls.certresolver=letsencrypt
+      - traefik.http.services.dr-upload.loadbalancer.server.port=8099
+
+  web:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    volumes:
+      - dr-site:/usr/share/nginx/html/david-runner:ro
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.dr-web.rule=Host(`srv1969277.hstgr.cloud`) && PathPrefix(`/david-runner`)
+      - traefik.http.routers.dr-web.entrypoints=websecure
+      - traefik.http.routers.dr-web.tls.certresolver=letsencrypt
+      - traefik.http.routers.dr-web.middlewares=dr-slash
+      - traefik.http.middlewares.dr-slash.redirectregex.regex=^(https://[^/]+/david-runner)$$
+      - traefik.http.middlewares.dr-slash.redirectregex.replacement=$${1}/
+      - traefik.http.services.dr-web.loadbalancer.server.port=80
+
+  expo:
+    # servidor de desenvolvimento do Expo (Metro) para o Expo Go
+    image: node:22-bookworm-slim
+    restart: unless-stopped
+    working_dir: /data/expo
+    environment:
+      - EXPO_PACKAGER_PROXY_URL=https://srv1969277.hstgr.cloud
+      - EXPO_NO_TELEMETRY=1
+      - CI=1
+    labels:
+      # o Expo Go abre exps://srv1969277.hstgr.cloud (HTTPS pelo Traefik)
+      - traefik.enable=true
+      - traefik.http.routers.dr-expo.rule=Host(`srv1969277.hstgr.cloud`)
+      - traefik.http.routers.dr-expo.priority=1
+      - traefik.http.routers.dr-expo.entrypoints=websecure
+      - traefik.http.routers.dr-expo.tls.certresolver=letsencrypt
+      - traefik.http.services.dr-expo.loadbalancer.server.port=8081
+    volumes:
+      - dr-expo:/data/expo
+    command:
+      - sh
+      - -c
+      - |
+        until [ -f /data/expo/package.json ]; do echo 'aguardando o envio do app...'; sleep 5; done
+        npm ci --no-audit --no-fund && exec npx expo start --port 8081 --host lan
+
+volumes:
+  dr-site:
+  dr-expo:

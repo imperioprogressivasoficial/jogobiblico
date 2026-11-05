@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Publica o DAVID RUNNER na VPS (projeto Docker "david-runner" da Hostinger).
+#   - jogo web/PWA:  https://srv1969277.hstgr.cloud/david-runner/
+#   - Expo Go:       exps://srv1969277.hstgr.cloud
+# Uso: DR_UPLOAD_TOKEN=<token do projeto> ./deploy/vps/publicar.sh
+# O token fica na variável UPLOAD_TOKEN do projeto no painel Docker da Hostinger (não versione).
+set -euo pipefail
+: "${DR_UPLOAD_TOKEN:?defina DR_UPLOAD_TOKEN}"
+HOST="${DR_HOST:-https://srv1969277.hstgr.cloud}"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+TMP="$(mktemp -d)"
+
+(cd "$ROOT/david-runner" && npx vite build)
+(cd "$ROOT/david-runner-expo" && npm run sync-game)
+tar czf "$TMP/site.tgz" -C "$ROOT/david-runner/dist" .
+tar czf "$TMP/expo.tgz" -C "$ROOT/david-runner-expo" --exclude=node_modules --exclude=.expo --exclude=dist .
+for k in site expo; do
+  curl -fsS -X PUT --data-binary "@$TMP/$k.tgz" -H "x-token: $DR_UPLOAD_TOKEN" "$HOST/david-runner-upload/$k"; echo
+done
+echo "Pronto. Reinicie o serviço expo do projeto david-runner no painel da Hostinger para o Expo Go pegar a versão nova."
