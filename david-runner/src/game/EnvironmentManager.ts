@@ -3,7 +3,8 @@ import type { MapTheme } from '../data/maps';
 import { ROAD_HALF_WIDTH, SEGMENT_LENGTH } from './config';
 import { GeoBuilder } from './models/geo';
 import { Materials } from './models/materials';
-import { BACKDROP_FACTORIES, SIDE_FACTORIES, buntingGeometry, cloudGeometry } from './models/props';
+import { SIDE_FACTORIES, buntingGeometry } from './models/scenery';
+import { Atmosphere } from './Atmosphere';
 import { makeRoadTexture, makeSideTexture } from './textures';
 import { Rng } from './rng';
 
@@ -35,11 +36,8 @@ const SLOT_LAYOUT: { side: -1 | 1; z: number }[] = [
  */
 export class EnvironmentManager {
   readonly root = new THREE.Group();
-  readonly hemi: THREE.HemisphereLight;
-  readonly sun: THREE.DirectionalLight;
-  private sky: THREE.Mesh;
-  private backdrop: THREE.Mesh | null = null;
-  private clouds: THREE.Mesh[] = [];
+  /** Céu, luzes, neblina e horizonte. */
+  readonly atmosphere: Atmosphere;
   private segments: Segment[] = [];
   private theme: MapTheme | null = null;
   private propGeos = new Map<string, THREE.BufferGeometry>();
@@ -53,35 +51,10 @@ export class EnvironmentManager {
   private roadMat = new THREE.MeshLambertMaterial();
   private sideMat = new THREE.MeshLambertMaterial();
   private rng = new Rng(2024);
-  private cloudGeo = cloudGeometry();
 
-  constructor(private scene: THREE.Scene) {
+  constructor(scene: THREE.Scene) {
     scene.add(this.root);
-    this.hemi = new THREE.HemisphereLight(0xffffff, 0x888888, 1.6);
-    scene.add(this.hemi);
-    this.sun = new THREE.DirectionalLight(0xffffff, 2.4);
-    this.sun.position.set(-7, 16, 9);
-    this.sun.target.position.set(0, 0, -10);
-    this.sun.shadow.mapSize.set(1024, 1024);
-    const sc = this.sun.shadow.camera;
-    sc.left = -11;
-    sc.right = 11;
-    sc.top = 26;
-    sc.bottom = -12;
-    sc.near = 1;
-    sc.far = 60;
-    this.sun.shadow.bias = -0.0015;
-    this.sun.shadow.normalBias = 0.03;
-    scene.add(this.sun, this.sun.target);
-
-    const skyGeo = new THREE.SphereGeometry(420, 24, 12);
-    skyGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(skyGeo.getAttribute('position').count * 3), 3));
-    this.sky = new THREE.Mesh(
-      skyGeo,
-      new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false }),
-    );
-    this.sky.renderOrder = -10;
-    scene.add(this.sky);
+    this.atmosphere = new Atmosphere(scene);
 
     this.roadGeo = new THREE.PlaneGeometry(ROAD_HALF_WIDTH * 2, SEGMENT_LENGTH);
     this.roadGeo.rotateX(-Math.PI / 2);
@@ -111,40 +84,11 @@ export class EnvironmentManager {
       this.root.add(group);
       this.segments.push({ group, slots: SLOT_LAYOUT.map(() => ({ mesh: null, id: null })), bunting: null });
     }
-
-    for (let i = 0; i < 7; i++) {
-      const c = new THREE.Mesh(this.cloudGeo, Materials.cloud);
-      c.position.set(this.rng.range(-220, 220), this.rng.range(38, 70), this.rng.range(-150, -300));
-      c.scale.setScalar(this.rng.range(1.2, 2.4));
-      this.clouds.push(c);
-      scene.add(c);
-    }
   }
 
   setTheme(theme: MapTheme): void {
     this.theme = theme;
-    const scene = this.scene;
-    scene.fog = new THREE.Fog(theme.fog, theme.fogNear, theme.fogFar);
-    scene.background = new THREE.Color(theme.skyBottom);
-    this.hemi.color.set(theme.hemiSky);
-    this.hemi.groundColor.set(theme.hemiGround);
-    this.sun.color.set(theme.sun);
-    this.sun.intensity = theme.sunIntensity;
-
-    // céu em degradê
-    const pos = this.sky.geometry.getAttribute('position');
-    const col = this.sky.geometry.getAttribute('color') as THREE.BufferAttribute;
-    const top = new THREE.Color(theme.skyTop);
-    const bottom = new THREE.Color(theme.skyBottom);
-    const fog = new THREE.Color(theme.fog);
-    const tmp = new THREE.Color();
-    for (let i = 0; i < pos.count; i++) {
-      const y = pos.getY(i) / 420;
-      if (y < 0.02) tmp.copy(fog);
-      else tmp.copy(bottom).lerp(top, Math.min(1, Math.pow(y, 0.6) * 1.1));
-      col.setXYZ(i, tmp.r, tmp.g, tmp.b);
-    }
-    col.needsUpdate = true;
+    this.atmosphere.setTheme(theme);
 
     // texturas
     this.roadMat.map?.dispose();
@@ -165,17 +109,6 @@ export class EnvironmentManager {
       }
     }
     this.curbGeo = cb.build();
-
-    // horizonte
-    if (this.backdrop) {
-      this.backdrop.geometry.dispose();
-      this.scene.remove(this.backdrop);
-    }
-    const haze = new THREE.Color(theme.fog);
-    const bd = BACKDROP_FACTORIES[theme.backdrop] ?? BACKDROP_FACTORIES.jerusalem;
-    this.backdrop = new THREE.Mesh(bd(theme.palette, haze), Materials.backdrop);
-    this.backdrop.renderOrder = -5;
-    this.scene.add(this.backdrop);
 
     // props laterais
     for (const seg of this.segments) {
@@ -272,14 +205,11 @@ export class EnvironmentManager {
         this.decorate(seg);
       }
     }
-    for (const c of this.clouds) {
-      c.position.x += dt * 1.5;
-      if (c.position.x > 260) c.position.x = -260;
-    }
+    this.atmosphere.update(dt);
   }
 
   setShadows(enabled: boolean): void {
-    this.sun.castShadow = enabled;
+    this.atmosphere.setShadows(enabled);
   }
 }
 
