@@ -18,6 +18,7 @@ import { PostFX, colorPipelineReady } from './PostFX';
 import { Rng } from './rng';
 import { ScoreManager, type RunStats } from './ScoreManager';
 import { TrackGenerator } from './TrackGenerator';
+import { StoryProps } from './StoryProps';
 
 export type EngineMode = 'menu' | 'showcase' | 'playing' | 'paused' | 'crashed' | 'over';
 export type Quality = 'alta' | 'media' | 'baixa';
@@ -159,6 +160,7 @@ export class GameEngine {
     this.stone = new THREE.Mesh(new THREE.DodecahedronGeometry(0.16, 0), new THREE.MeshStandardMaterial({ color: 0x9aa3ad, roughness: 0.9 }));
     this.stone.visible = false;
     this.scene.add(this.stone);
+    this.scene.add(this.storyProps.group);
     this.player.onEvent = (e) => {
       if (this.mode !== 'playing') return;
       const r = this.score.run;
@@ -296,6 +298,7 @@ export class GameEngine {
     this.chariot.configure(opts.chariot?.charges ?? 0, opts.chariot?.duration ?? CHARIOT.baseDuration, powerDef);
     this.boostFx.setStyle(powerDef.glow, powerDef.id === 'chariot');
     this.parted.length = 0;
+    this.storyProps.clear();
     this.speedAt = scaledSpeedCurve(opts.speedScale ?? 1, opts.rampScale ?? 1);
     this.setMap(opts.mapId);
     this.setCharacter(opts.characterId, opts.skinId);
@@ -322,6 +325,13 @@ export class GameEngine {
     this.cameraCtl.setMode('follow');
     this.setMode('playing');
     audio.playMusic('game');
+  }
+
+  /** Figuras da história ao lado da pista (modo "Viver a história"). */
+  readonly storyProps = new StoryProps();
+
+  spawnStoryProps(emojis: string[], count?: number): void {
+    this.storyProps.spawn(emojis, this.distance, count);
   }
 
   pause(): void {
@@ -540,6 +550,7 @@ export class GameEngine {
       this.particles.update(dt, 0);
     }
     const camSpeed = this.mode === 'playing' || this.mode === 'crashed' ? this.speed : 0;
+    this.storyProps.update(this.distance, dt);
     this.cameraCtl.update(dt, this.player.x, this.player.y, camSpeed);
     this.boostFx.applyCamera(this.cameraCtl.camera, dt);
     this.env.atmosphere.setHeroFill(this.mode === 'menu' || this.mode === 'showcase' ? 1 : 0, dt);

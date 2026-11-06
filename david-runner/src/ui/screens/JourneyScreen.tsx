@@ -105,6 +105,7 @@ export function JourneyScreen() {
                                 <div className="stop-badges">
                                   <span className={`seal ${read ? 'on' : ''}`}>{read ? '📖 Lida ✔' : '📖 Ler agora'}</span>
                                   <span className={`seal ${quiz ? 'on' : ''}`}>{quiz ? '❓ Quiz ✔' : '❓ Quiz'}</span>
+                                  <span className="seal seal-live">🏃 Viver</span>
                                 </div>
                               </div>
                             </button>

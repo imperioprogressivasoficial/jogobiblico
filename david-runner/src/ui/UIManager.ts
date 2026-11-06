@@ -3,6 +3,7 @@ import type { GameEngine } from '../game/GameEngine';
 import { DIFFICULTY } from '../data/chariot';
 import { audio } from '../game/AudioManager';
 import { progression } from '../state/ProgressionManager';
+import type { StoryEpisode } from '../data/story';
 
 export type Screen =
   | 'splash'
@@ -97,14 +98,24 @@ class UIManagerImpl {
   /** Aba inicial da Loja (o botão de poderes do menu abre direto em "Poderes"). */
   shopTab: 'herois' | 'trajes' | 'melhorias' | 'poderes' = 'herois';
 
+  /** História sendo vivida na corrida atual (modo "Viver a história"); null numa corrida normal. */
+  storyRun: StoryEpisode | null = null;
+
+  /** Leva o herói para dentro do cenário da história: corrida no mapa dela, com narração e quiz. */
+  startStoryRun(story: StoryEpisode): void {
+    this.storyRun = story;
+    this.startRun(story.mapId, true);
+  }
+
   /** Inicia uma corrida com as escolhas atuais do jogador. */
-  startRun(): void {
+  startRun(mapOverride?: string, keepStory = false): void {
     const e = this.engine;
     if (!e) return;
+    if (!keepStory) this.storyRun = null;
     const d = progression.data;
     const diff = DIFFICULTY[d.settings.difficulty] ?? DIFFICULTY.crianca;
     e.startRun({
-      mapId: d.selectedMap,
+      mapId: mapOverride ?? d.selectedMap,
       characterId: d.selectedCharacter,
       skinId: d.selectedSkin[d.selectedCharacter] ?? 'padrao',
       baseMultiplier: progression.baseMultiplier,

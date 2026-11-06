@@ -14,7 +14,7 @@ type Step = { kind: 'page'; index: number } | { kind: 'lesson' } | { kind: 'quiz
  * Leitor de história em tela cheia, no estilo de um livro ilustrado de pergaminho:
  * páginas com texto grande, narração em voz alta, "O que aprendemos" e um quiz.
  */
-export function StoryReader({ story, onClose }: { story: StoryEpisode; onClose: () => void }) {
+export function StoryReader({ story, onClose, onPlay }: { story: StoryEpisode; onClose: () => void; onPlay?: (s: StoryEpisode) => void }) {
   const era = eraInfo(story.era);
   const steps = useMemo<Step[]>(
     () => [...story.pages.map((_, index) => ({ kind: 'page' as const, index })), { kind: 'lesson' }, { kind: 'quiz' }],
@@ -124,6 +124,24 @@ export function StoryReader({ story, onClose }: { story: StoryEpisode; onClose: 
               <p className="reader-text" data-testid="reader-text">
                 {story.pages[cur.index]}
               </p>
+              {cur.index === 0 && UIManager.engine && (
+                <Btn
+                  variant="gold"
+                  size="lg"
+                  className="reader-live"
+                  testId="reader-live"
+                  onClick={() => {
+                    stopSpeaking();
+                    if (onPlay) onPlay(story);
+                    else {
+                      onClose();
+                      UIManager.startStoryRun(story);
+                    }
+                  }}
+                >
+                  🏃 Viver esta história
+                </Btn>
+              )}
             </>
           )}
 

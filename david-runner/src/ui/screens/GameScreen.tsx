@@ -8,6 +8,7 @@ import { MISSION_POOL, REVIVE_COST } from '../../data/progression';
 import { progression, type RunSummary } from '../../state/ProgressionManager';
 import { Btn, CoinIcon, Progress } from '../components/common';
 import { StoryReader } from '../components/StoryReader';
+import { StoryRunOverlay } from '../components/StoryRunOverlay';
 import { StoryScene, eraInfo } from '../components/StoryScene';
 import { UIManager, fmt, useProgress } from '../UIManager';
 
@@ -51,6 +52,8 @@ export function GameScreen() {
   const multRef = useRef<HTMLSpanElement>(null);
   const toastedMissions = useRef(new Set<number>());
   const [runId, setRunId] = useState(0);
+  /** Quiz do modo "Viver a história" segurando o jogo (não é a pausa normal). */
+  const storyHold = useRef(false);
 
   const showBanner = useCallback((text: string) => setBanner({ id: Date.now() + Math.random(), text }), []);
 
@@ -114,7 +117,7 @@ export function GameScreen() {
         showBanner(`${engine.chariot.def.icon} Sem ${engine.chariot.def.chargeName[1]}! Ganhe nas missões ou na loja.`);
       }),
       engine.on('mode', (m) => {
-        if (m === 'paused') setPhase((p) => (p === 'playing' ? 'paused' : p));
+        if (m === 'paused' && !storyHold.current) setPhase((p) => (p === 'playing' ? 'paused' : p));
       }),
     ];
     return () => offs.forEach((o) => o());
@@ -239,7 +242,9 @@ export function GameScreen() {
     setPowers([]);
     setReading(null);
     setPhase('playing');
-    UIManager.startRun();
+    storyHold.current = false;
+    if (UIManager.storyRun) UIManager.startStoryRun(UIManager.storyRun);
+    else UIManager.startRun();
     setBoost({ remaining: 0, total: engine.chariot.duration, charges: engine.chariot.charges });
   }
 
@@ -417,9 +422,29 @@ export function GameScreen() {
         </div>
       )}
 
+      {UIManager.storyRun && phase !== 'results' && (
+        <StoryRunOverlay
+          key={runId}
+          engine={engine}
+          story={UIManager.storyRun}
+          playing={phase === 'playing'}
+          holdRef={storyHold}
+          onResume={resumeGame}
+        />
+      )}
+
       {/* FIM DE PARTIDA */}
       {phase === 'results' && summary && <Results summary={summary} onRestart={restart} onMenu={toMenu} onRead={setReading} />}
-      {reading && <StoryReader story={reading} onClose={() => setReading(null)} />}
+      {reading && (
+        <StoryReader
+          story={reading}
+          onClose={() => setReading(null)}
+          onPlay={(st) => {
+            UIManager.storyRun = st;
+            restart();
+          }}
+        />
+      )}
     </div>
   );
 }

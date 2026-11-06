@@ -176,7 +176,7 @@ export class AudioManager {
 
   private applyVolumes(): void {
     if (!this.ctx) return;
-    this.musicGain.gain.setTargetAtTime(this.musicVolume * 0.55 * (this.paused ? 0.15 : 1), this.ctx.currentTime, 0.05);
+    this.musicGain.gain.setTargetAtTime(this.musicVolume * 0.55 * (this.paused ? 0.15 : 1) * (this.ducked ? 0.3 : 1), this.ctx.currentTime, 0.05);
     this.sfxGain.gain.setTargetAtTime(this.sfxVolume, this.ctx.currentTime, 0.02);
   }
 
@@ -184,7 +184,14 @@ export class AudioManager {
   setPaused(paused: boolean): void {
     this.paused = paused;
     if (!this.ctx) return;
-    this.musicGain.gain.setTargetAtTime(this.musicVolume * 0.55 * (paused ? 0.15 : 1), this.ctx.currentTime, 0.08);
+    this.musicGain.gain.setTargetAtTime(this.musicVolume * 0.55 * (paused ? 0.15 : 1) * (this.ducked ? 0.3 : 1), this.ctx.currentTime, 0.08);
+  }
+
+  private ducked = false;
+  /** Abaixa a música enquanto o narrador fala. */
+  setDucked(d: boolean): void {
+    this.ducked = d;
+    this.applyVolumes();
   }
 
   /** Suspende todo o áudio quando a aba fica oculta. */
