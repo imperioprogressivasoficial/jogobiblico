@@ -37,6 +37,25 @@ interface Pose {
   mouthW: number;
 }
 
+/** [multiplicador da rigidez, amortecimento] das partes com inércia; o resto segue direto. */
+const SPRING: Partial<Record<keyof Pose, [number, number]>> = {
+  pivotRotX: [1, 0.85],
+  pivotRotY: [1, 0.8],
+  pivotRotZ: [0.9, 0.7],
+  torsoX: [0.95, 0.75],
+  torsoY: [0.95, 0.72],
+  torsoZ: [0.9, 0.7],
+  headX: [0.8, 0.55],
+  headY: [0.8, 0.55],
+  headZ: [0.8, 0.55],
+  armLX: [1, 0.6],
+  armRX: [1, 0.6],
+  armLZ: [0.9, 0.6],
+  armRZ: [0.9, 0.6],
+  foreLX: [0.85, 0.5],
+  foreRX: [0.85, 0.5],
+};
+
 const KEYS: (keyof Pose)[] = [
   'pivotY', 'pivotRotX', 'pivotRotY', 'pivotRotZ', 'squash', 'torsoX', 'torsoY', 'torsoZ', 'headX', 'headY', 'headZ',
   'armLX', 'armLZ', 'armRX', 'armRZ', 'foreLX', 'foreRX', 'legLX', 'legLZ', 'legRX', 'legRZ', 'shinLX', 'shinRX',
@@ -65,6 +84,8 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 export class CharacterAnimator {
   private cur: Pose = blankPose();
   private tgt: Pose = blankPose();
+  /** Velocidades das molas (braços, cabeça e tronco têm inércia e "sobra" de movimento). */
+  private vel: Pose = blankPose();
   private tmp: Pose = blankPose();
   private time = 0;
   private runPhase = 0;
@@ -96,6 +117,7 @@ export class CharacterAnimator {
 
   setRig(rig: CharacterRig): void {
     this.rig = rig;
+    this.vel = blankPose();
     this.hairSpring.reset();
     this.swingSpring.reset();
     this.bagX.reset();
@@ -128,7 +150,20 @@ export class CharacterAnimator {
     const sharp = this.state === 'crash' ? 12 : this.state === 'slide' || this.state === 'jump' ? 18 : this.state === 'idle' ? 8 : 15;
     const k = 1 - Math.exp(-dt * sharp);
     const c = this.cur;
-    for (const key of KEYS) c[key] += (target[key] - c[key]) * k;
+    const v = this.vel;
+    const h = Math.min(dt, 1 / 30);
+    for (const key of KEYS) {
+      const sp = SPRING[key];
+      if (!sp) {
+        // pernas, quadril e rosto seguem a pose de perto (sem pé "deslizando")
+        c[key] += (target[key] - c[key]) * k;
+        continue;
+      }
+      // mola subamortecida: o membro chega um pouco atrasado e passa do ponto antes de assentar
+      const w = sharp * sp[0];
+      v[key] += (w * w * (target[key] - c[key]) - 2 * sp[1] * w * v[key]) * h;
+      c[key] += v[key] * h;
+    }
 
     // piscar (independente da pose)
     this.blinkT += dt;
@@ -186,19 +221,26 @@ export class CharacterAnimator {
     const c = Math.cos(ph);
     const as = Math.abs(s);
     const ex = this.rig.extras;
-    const stride = ex?.longRobe ? 0.78 : 0.95;
+    // passada varia um pouquinho (ninguém corre igual a cada passo)
+    const vary = 1 + 0.05 * Math.sin(this.time * 0.9) * Math.sin(this.time * 0.37 + 2);
+    const stride = (ex?.longRobe ? 0.78 : 0.95) * vary;
+    const sT = Math.sin(ph - 0.35); // tronco gira um pouco depois do quadril
+    const sH = Math.sin(ph - 0.7); // cabeça compensa por último
+    const sA = Math.sin(ph - 0.2); // braços acompanham com leve atraso
     const staff = ex?.holdsStaff ?? false;
     const lean = this.lean;
-    p.pivotY = this.rig.hipHeight - 0.045 + 0.09 * Math.pow(as, 0.8);
+    // sobe logo depois do impulso e desce rápido no contato (curva assimétrica, não senoide pura)
+    const up = Math.pow(Math.abs(Math.sin(ph + 0.35)), 0.6);
+    p.pivotY = this.rig.hipHeight - 0.05 + 0.1 * up;
     p.pivotRotX = -0.07;
     p.pivotRotY = -0.11 * s;
     p.pivotRotZ = -lean * 0.26 + 0.035 * s;
     p.squash = 1 + 0.045 * (as - 0.5);
     p.torsoX = -0.2 - 0.04 * as;
-    p.torsoY = 0.24 * s;
+    p.torsoY = 0.24 * sT;
     p.torsoZ = lean * 0.08;
     p.headX = 0.17 + 0.04 * as;
-    p.headY = -0.13 * s - lean * 0.28;
+    p.headY = -0.13 * sH - lean * 0.28;
     p.headZ = lean * 0.12;
     p.legLX = stride * s + 0.06;
     p.legRX = -stride * s + 0.06;
@@ -207,12 +249,12 @@ export class CharacterAnimator {
     p.shinLX = -(0.28 + 1.45 * Math.pow(Math.max(0, c), 1.4));
     p.shinRX = -(0.28 + 1.45 * Math.pow(Math.max(0, -c), 1.4));
     // braços bombeando, cotovelos dobrados, punhos sobem na frente
-    p.armLX = -0.95 * s;
-    p.armRX = (staff ? 0.55 : 0.95) * s;
-    p.armLZ = -0.14 - 0.06 * Math.max(0, -s);
-    p.armRZ = 0.14 + 0.06 * Math.max(0, s);
-    p.foreLX = 1.25 + 0.5 * Math.max(0, -s);
-    p.foreRX = staff ? 1.15 + 0.2 * Math.max(0, s) : 1.25 + 0.5 * Math.max(0, s);
+    p.armLX = -0.95 * sA;
+    p.armRX = (staff ? 0.55 : 0.95) * sA;
+    p.armLZ = -0.14 - 0.06 * Math.max(0, -sA);
+    p.armRZ = 0.14 + 0.06 * Math.max(0, sA);
+    p.foreLX = 1.25 + 0.5 * Math.max(0, -sA);
+    p.foreRX = staff ? 1.15 + 0.2 * Math.max(0, sA) : 1.25 + 0.5 * Math.max(0, sA);
     p.lid = 0.9;
     p.brow = -0.3;
     p.mouth = 0.65 + 0.1 * as;

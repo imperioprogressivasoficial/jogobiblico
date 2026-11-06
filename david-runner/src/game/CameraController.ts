@@ -39,8 +39,6 @@ export class CameraController {
   private baseFov = 60;
   private speedK = 0;
   // balanço e aterrissagem
-  private bobPhase = 0;
-  private bobAmp = 0;
   private landOffset = 0;
   private landVel = 0;
   private prevPy = 0;
@@ -50,6 +48,12 @@ export class CameraController {
   private tl = new THREE.Vector3();
   private pivot = new THREE.Vector3();
   private tmp = new THREE.Vector3();
+  // molas da câmera (seguimento com inércia, como um operador de verdade)
+  private posVel = new THREE.Vector3();
+  private lookVel = new THREE.Vector3();
+  private bank = 0;
+  private time = 0;
+  private shakeSeed = Math.random() * 100;
 
   constructor() {
     this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 900);
@@ -91,6 +95,8 @@ export class CameraController {
       this.targets(0, 0);
       this.pos.copy(this.tp);
       this.look.copy(this.tl);
+      this.posVel.set(0, 0, 0);
+      this.lookVel.set(0, 0, 0);
       this.fov = this.baseFov;
       this.trans = 1;
       this.applyFov();
@@ -111,6 +117,8 @@ export class CameraController {
       this.targets(px, py);
       this.pos.copy(this.tp);
       this.look.copy(this.tl);
+      this.posVel.set(0, 0, 0);
+      this.lookVel.set(0, 0, 0);
       this.fov = this.runFov();
       this.prevPy = py;
     }
@@ -189,11 +197,14 @@ export class CameraController {
       this.look.lerpVectors(this.fromLook, this.tl, e);
       this.fov = THREE.MathUtils.lerp(this.fov, this.runFov(), 1 - Math.exp(-dt * 5));
     } else {
-      const rate = running ? 9 : 3.5;
-      const k = 1 - Math.exp(-dt * rate);
-      this.pos.lerp(this.tp, k);
-      this.look.lerp(this.tl, k);
-      this.fov += (this.runFov() - this.fov) * (1 - Math.exp(-dt * 4));
+      // molas criticamente amortecidas: a câmera acelera e freia suave, sem "trilho"
+      // (o eixo X anda um pouco atrás do herói e o Y mais devagar, como num carrinho de filmagem)
+      const wx = running ? 6.5 : 3.2;
+      const wy = running ? 4.2 : 3.2;
+      const wz = running ? 5 : 3.2;
+      spring(this.pos, this.posVel, this.tp, wx, wy, wz, dt);
+      spring(this.look, this.lookVel, this.tl, running ? 8 : 3.6, running ? 5.5 : 3.6, running ? 6 : 3.6, dt);
+      this.fov += (this.runFov() - this.fov) * (1 - Math.exp(-dt * 3));
     }
     this.applyFov();
 
@@ -210,26 +221,38 @@ export class CameraController {
     this.landOffset += this.landVel * dt;
     this.landOffset = THREE.MathUtils.clamp(this.landOffset, -0.35, 0.2);
 
-    // balanço da corrida (só no chão)
-    const grounded = py <= 0.02;
-    const bobTarget = running && grounded ? 0.35 + 0.65 * this.speedK : 0;
-    this.bobAmp += (bobTarget - this.bobAmp) * (1 - Math.exp(-dt * 6));
-    this.bobPhase += dt * (7 + speed * 0.22);
-    const bobY = -Math.abs(Math.sin(this.bobPhase)) * 0.045 * this.bobAmp;
-    const roll = Math.sin(this.bobPhase) * 0.0045 * this.bobAmp;
+    // inclinação leve na troca de pista (a câmera "acompanha a curva"), sem balanço artificial
+    this.time += dt;
+    const bankTarget = running ? THREE.MathUtils.clamp(-this.posVel.x * 0.014, -0.035, 0.035) : 0;
+    this.bank += (bankTarget - this.bank) * (1 - Math.exp(-dt * 7));
+    // respiração bem sutil e irregular (soma de senos lentos) fora da corrida
+    const drift = running ? 0 : (Math.sin(this.time * 0.43) + Math.sin(this.time * 0.71 + 1.3) * 0.6) * 0.012;
 
     const cam = this.camera;
     cam.position.copy(this.pos);
-    cam.position.y += bobY + this.landOffset;
+    cam.position.y += this.landOffset + drift;
     this.tmp.copy(this.look);
-    this.tmp.y += bobY * 0.5 + this.landOffset * 0.6;
+    this.tmp.y += this.landOffset * 0.6;
     if (this.shake > 0) {
-      this.shake = Math.max(0, this.shake - dt * 2.5);
-      const s = this.shake * 0.35;
-      cam.position.x += (Math.random() - 0.5) * s;
-      cam.position.y += (Math.random() - 0.5) * s;
+      // tremor suave (ruído por senos, não aleatório a cada quadro), mais forte no começo
+      this.shake = Math.max(0, this.shake - dt * 2.2);
+      const tr = this.shake * this.shake * 0.3;
+      const t = this.time * 31 + this.shakeSeed;
+      cam.position.x += (Math.sin(t) + Math.sin(t * 1.73 + 2) * 0.5) * tr;
+      cam.position.y += (Math.sin(t * 1.31 + 4) + Math.sin(t * 2.11) * 0.5) * tr;
     }
     cam.lookAt(this.tmp);
-    if (roll !== 0) cam.rotateZ(roll);
+    if (this.bank !== 0) cam.rotateZ(this.bank);
   }
+}
+
+/** Mola criticamente amortecida por eixo (semi-implícita, estável em 30 fps). */
+function spring(cur: THREE.Vector3, vel: THREE.Vector3, target: THREE.Vector3, wx: number, wy: number, wz: number, dt: number): void {
+  const h = Math.min(dt, 1 / 20);
+  vel.x += (wx * wx * (target.x - cur.x) - 2 * wx * vel.x) * h;
+  vel.y += (wy * wy * (target.y - cur.y) - 2 * wy * vel.y) * h;
+  vel.z += (wz * wz * (target.z - cur.z) - 2 * wz * vel.z) * h;
+  cur.x += vel.x * h;
+  cur.y += vel.y * h;
+  cur.z += vel.z * h;
 }

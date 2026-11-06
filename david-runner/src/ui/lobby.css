@@ -1308,3 +1308,69 @@
   animation: caption-in 0.4s ease-out;
   text-align: center;
 }
+
+/* ---------------------------------------------- entrada das telas (suave, curta) */
+.list-screen,
+.mode-screen,
+.lobby {
+  animation: screen-in 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes screen-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+}
+.lobby .lobby-side {
+  animation: side-in 0.45s cubic-bezier(0.22, 1.2, 0.36, 1) both;
+}
+.lobby .lobby-shopcard {
+  animation: side-in-r 0.5s cubic-bezier(0.22, 1.2, 0.36, 1) both, card-bob 3s ease-in-out 0.5s infinite;
+}
+.lobby .lobby-play {
+  animation: screen-in 0.5s cubic-bezier(0.22, 1.2, 0.36, 1) 0.08s both;
+}
+@keyframes side-in {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+}
+@keyframes side-in-r {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+}
+.mode-card,
+.pack,
+.feat-card,
+.lobby-mini,
+.lobby-tab,
+.mq-opt,
+.mv-piece,
+.ob-age,
+.ob-hero {
+  transition: transform 0.12s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+.mode-card:active,
+.pack:active,
+.feat-card:active,
+.lobby-mini:active,
+.lobby-tab:active,
+.mq-opt:active,
+.mv-piece:active,
+.ob-age:active,
+.ob-hero:active {
+  transform: scale(0.95);
+}
+@media (prefers-reduced-motion: reduce) {
+  .list-screen,
+  .mode-screen,
+  .lobby,
+  .lobby .lobby-side,
+  .lobby .lobby-shopcard,
+  .lobby .lobby-play {
+    animation: none;
+  }
+}
