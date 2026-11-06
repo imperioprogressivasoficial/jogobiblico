@@ -61,6 +61,21 @@ export type Sfx =
   | 'oops'
   | 'page';
 
+/** WAV de silêncio (0,1 s, 8 kHz, 8 bits) gerado em código, sem arquivo externo. */
+const SILENT_WAV = (() => {
+  const n = 800;
+  const b = new Uint8Array(44 + n);
+  const v = new DataView(b.buffer);
+  const str = (o: number, t: string) => [...t].forEach((c, i) => (b[o + i] = c.charCodeAt(0)));
+  str(0, 'RIFF'); v.setUint32(4, 36 + n, true); str(8, 'WAVEfmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true);
+  str(36, 'data'); v.setUint32(40, n, true); b.fill(128, 44);
+  let bin = '';
+  b.forEach((x) => (bin += String.fromCharCode(x)));
+  return 'data:audio/wav;base64,' + btoa(bin);
+})();
+
 export class AudioManager {
   private ctx: AudioContext | null = null;
   private master!: GainNode;
@@ -110,7 +125,43 @@ export class AudioManager {
         this.setBoostLoop(true);
       }
     }
-    if (this.ctx.state === 'suspended' && !this.suspendedByPause) void this.ctx.resume();
+    // No iPhone o contexto também pode ficar "interrupted" (não só "suspended"): retoma sempre que não estiver tocando.
+    if (this.ctx.state !== 'running' && !this.suspendedByPause) void this.ctx.resume().catch(() => {});
+    this.unlockIOS();
+  }
+
+  private iosUnlocked = false;
+  private silentEl: HTMLAudioElement | null = null;
+
+  /**
+   * iPhone/iPad: o Web Audio segue o botão de silêncio por padrão.
+   * 1) navigator.audioSession.type = 'playback' (iOS 16.4+) faz o jogo tocar mesmo no silencioso;
+   * 2) um <audio> mudo em loop, iniciado no toque, coloca a sessão de áudio em modo reprodução nos iOS mais antigos.
+   */
+  private unlockIOS(): void {
+    try {
+      const nav = navigator as unknown as { audioSession?: { type: string } };
+      if (nav.audioSession && nav.audioSession.type !== 'playback') nav.audioSession.type = 'playback';
+    } catch {
+      /* sem suporte */
+    }
+    if (this.iosUnlocked) return;
+    try {
+      if (!this.silentEl) {
+        const el = document.createElement('audio');
+        el.src = SILENT_WAV;
+        el.loop = true;
+        el.setAttribute('playsinline', '');
+        el.setAttribute('webkit-playsinline', '');
+        el.preload = 'auto';
+        this.silentEl = el;
+      }
+      const pr = this.silentEl.play();
+      if (pr) pr.then(() => (this.iosUnlocked = true)).catch(() => {});
+      else this.iosUnlocked = true;
+    } catch {
+      /* sem suporte */
+    }
   }
 
   get ready(): boolean {
@@ -140,8 +191,14 @@ export class AudioManager {
   setHidden(hidden: boolean): void {
     this.suspendedByPause = hidden;
     if (!this.ctx) return;
-    if (hidden) void this.ctx.suspend();
-    else void this.ctx.resume();
+    if (hidden) {
+      void this.ctx.suspend();
+      this.silentEl?.pause();
+      this.iosUnlocked = false;
+    } else {
+      void this.ctx.resume().catch(() => {});
+      this.unlockIOS();
+    }
   }
 
   // ------------------------------------------------------------------ música

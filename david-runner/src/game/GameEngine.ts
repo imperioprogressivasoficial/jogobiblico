@@ -178,7 +178,7 @@ export class GameEngine {
       }
     };
     this.input = new InputManager(inputTarget, (a) => this.handleAction(a));
-    for (const ev of ['pointerup', 'touchend', 'keydown'] as const) inputTarget.addEventListener(ev, () => audio.unlock(), { passive: true });
+    for (const ev of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown'] as const) window.addEventListener(ev, () => audio.unlock(), { passive: true, capture: true });
     this.input.enabled = false;
 
     this.setMap('jerusalem');
