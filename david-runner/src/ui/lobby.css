@@ -1596,3 +1596,102 @@
   font-weight: 800;
   font-size: 13px;
 }
+
+/* ---------------------------------------------------------------- Painel dos Pais */
+.pp-card {
+  background: #fff;
+  border-radius: 18px;
+  border: 3px solid var(--outline);
+  box-shadow: 0 5px 0 var(--outline);
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  color: var(--outline);
+}
+.pp-card header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-title);
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+.pp-badge {
+  margin-left: auto;
+  background: var(--pop-yellow);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 14px;
+}
+.pp-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 700;
+}
+.pp-steps li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: #f2edff;
+}
+.pp-steps li.on {
+  background: #d9ffd9;
+}
+.pp-streak {
+  margin-top: 8px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pp-ask {
+  background: linear-gradient(#fff9e6, #fff1c2);
+}
+.pp-q {
+  font-family: var(--font-title);
+  font-size: 20px;
+  margin: 4px 0 10px;
+}
+.pp-a,
+.pp-lesson,
+.pp-verse {
+  margin: 0 0 8px;
+  font-weight: 700;
+}
+.pp-a small,
+.pp-lesson small,
+.pp-verse small {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #8a5a1a;
+  font-weight: 800;
+}
+.pp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.pp-grid div {
+  background: #f2edff;
+  border-radius: 12px;
+  padding: 8px;
+  text-align: center;
+}
+.pp-grid b {
+  display: block;
+  font-family: var(--font-title);
+  font-size: 22px;
+}
+.pp-grid small {
+  font-weight: 700;
+  font-size: 12px;
+}
+.parents .setting-row {
+  color: var(--outline);
+}

@@ -54,6 +54,9 @@ export function SettingsScreen() {
               <span>Compras protegidas por PIN</span>
               <span className="setting-val">✔ Ativo</span>
             </div>
+            <Btn variant="blue" size="sm" onClick={() => UIManager.go('parents')} testId="btn-parents">
+              👨‍👩‍👧 Painel dos Pais
+            </Btn>
           </section>
         )}
         <section className="settings-group">

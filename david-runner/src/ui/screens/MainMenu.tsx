@@ -53,7 +53,7 @@ export function MainMenu() {
   return (
     <div className="screen menu lobby" data-testid="main-menu">
       <header className="lobby-top">
-        <button type="button" className="lobby-profile" onClick={() => UIManager.go('settings')} data-testid="lobby-profile">
+        <button type="button" className="lobby-profile" onClick={() => UIManager.go('parents')} data-testid="lobby-profile">
           <Portrait charId={avatar.id} skinId={d.selectedSkin[avatar.id] ?? 'padrao'} size={44} className="lobby-avatar" />
           <span className="lobby-name">
             <strong>{profile?.childName ?? 'Jogador'}</strong>

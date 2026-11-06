@@ -23,7 +23,8 @@ export type Screen =
   | 'mode-memory'
   | 'mode-verse'
   | 'mode-sling'
-  | 'coins-info';
+  | 'coins-info'
+  | 'parents';
 
 export type ShopTab = 'destaque' | 'moedas' | 'herois' | 'trajes' | 'melhorias' | 'poderes';
 
