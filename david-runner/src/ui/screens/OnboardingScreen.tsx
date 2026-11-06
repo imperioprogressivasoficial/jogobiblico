@@ -68,6 +68,19 @@ export function OnboardingScreen() {
             <Logo small />
             <h1 className="ob-title">Bem-vindo à aventura!</h1>
             <p className="ob-text">Corra com os heróis da Bíblia, jogue, aprenda as histórias e ganhe prêmios. Vamos criar sua conta?</p>
+            <button
+              type="button"
+              className="ob-quick"
+              data-testid="ob-quick"
+              onClick={() => {
+                audio.play('buy');
+                progression.quickTestAccount();
+                UIManager.showMenuScene();
+                UIManager.go('menu', true);
+              }}
+            >
+              Acesso rápido (equipe) · PIN 1234
+            </button>
           </>
         )}
 

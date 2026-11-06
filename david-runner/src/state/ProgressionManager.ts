@@ -750,6 +750,20 @@ export class ProgressionManager {
     this.commit();
   }
 
+  /** Acesso rápido para a equipe testar: conta pronta, tudo liberado e moedas de sobra. */
+  quickTestAccount(): void {
+    this.data.profile = { childName: 'Bruno', age: 8, gender: 'm', avatar: 'davi', parentEmail: 'teste@imperio.app', pin: '1234', consent: true, createdAt: new Date().toISOString() };
+    this.data.coins = Math.max(this.data.coins, 50_000);
+    this.data.relics = Math.max(this.data.relics, 50);
+    this.data.characters = CHARACTERS.map((c) => c.id);
+    this.data.maps = MAPS.map((m) => m.id);
+    this.data.unlockedPowers = POWERS.map((p) => p.id);
+    for (const p of POWERS) this.data.powers[p.id] = { charges: MAX_CHARGES, level: this.data.powers[p.id]?.level ?? 0 };
+    this.data.chariot = { ...this.data.powers.chariot };
+    this.data.tutorialDone = true;
+    this.commit();
+  }
+
   updateProfile(p: Partial<Profile>): void {
     if (!this.data.profile) return;
     this.data.profile = { ...this.data.profile, ...p };

@@ -1585,3 +1585,14 @@
   width: 60px;
   font-size: 10px;
 }
+
+.ob-quick {
+  margin-top: 4px;
+  border: 2px dashed var(--pop-purple);
+  background: #f2edff;
+  color: var(--pop-purple);
+  border-radius: 12px;
+  padding: 8px 14px;
+  font-weight: 800;
+  font-size: 13px;
+}
