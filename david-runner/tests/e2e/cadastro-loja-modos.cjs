@@ -15,7 +15,7 @@ const O = process.argv[2] || require('os').tmpdir();
   await p.click('[data-testid=ob-next]');
   await p.fill('[data-testid=ob-name]', 'Tássia'); await p.click('[data-testid=ob-next]');
   await p.click('[data-testid=ob-age-7]'); await p.click('[data-testid=ob-next]');
-  await p.click('[data-testid=ob-hero-davi]'); await shot('02-heroes'); await p.click('[data-testid=ob-next]');
+  await p.click('[data-testid=ob-gender-f]'); await p.click('[data-testid=ob-next]'); await p.click('[data-testid=ob-hero-ester]'); await shot('02-heroes'); await p.click('[data-testid=ob-next]');
   await p.fill('[data-testid=ob-email]', 'pai@exemplo.com'); await p.fill('[data-testid=ob-pin]', '1234'); await p.fill('[data-testid=ob-pin2]', '1234'); await p.check('[data-testid=ob-consent]');
   await shot('03-parents'); await p.click('[data-testid=ob-next]');
   await shot('04-done'); await p.click('[data-testid=ob-next]');

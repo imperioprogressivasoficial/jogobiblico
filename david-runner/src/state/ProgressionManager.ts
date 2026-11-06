@@ -47,6 +47,8 @@ export interface MissionState {
 export interface Profile {
   childName: string;
   age: number;
+  /** Menino ou menina (muda os heróis sugeridos). */
+  gender: 'm' | 'f';
   /** Herói escolhido como avatar. */
   avatar: string;
   parentEmail: string;
@@ -677,7 +679,11 @@ export class ProgressionManager {
   // ------------------------------------------------------------ conta
   createProfile(p: Omit<Profile, 'createdAt'>): void {
     this.data.profile = { ...p, createdAt: new Date().toISOString() };
-    if (CHARACTERS.some((c) => c.id === p.avatar) && this.data.characters.includes(p.avatar)) this.data.selectedCharacter = p.avatar;
+    // o herói escolhido no cadastro é grátis
+    if (CHARACTERS.some((c) => c.id === p.avatar)) {
+      if (!this.data.characters.includes(p.avatar)) this.data.characters.push(p.avatar);
+      this.data.selectedCharacter = p.avatar;
+    }
     this.commit();
   }
 

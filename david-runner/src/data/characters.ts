@@ -55,6 +55,8 @@ export interface CharacterDef {
   skins: SkinDef[];
   /** Pequena vantagem de estilo para cada herói. */
   perk: string;
+  /** Para a escolha no cadastro (menino / menina). */
+  gender: 'm' | 'f';
 }
 
 const baseSandal = '#6b3f1f';
@@ -67,6 +69,7 @@ export const CHARACTERS: CharacterDef[] = [
     description: 'Filho mais novo de Jessé, pastor de ovelhas em Belém. Corajoso, ágil e cheio de fé.',
     reference: '1 Samuel 16–17',
     unlock: { type: 'free' },
+    gender: 'm',
     perk: 'Equilibrado em tudo.',
     look: {
       skin: '#e8b48a',
@@ -101,6 +104,7 @@ export const CHARACTERS: CharacterDef[] = [
     reference: 'Êxodo 3–20',
     unlock: { type: 'coins', amount: 2500 },
     perk: 'Seu cajado é inconfundível.',
+    gender: 'm',
     look: {
       skin: '#d9a47c',
       hair: '#efeae0',
@@ -134,6 +138,7 @@ export const CHARACTERS: CharacterDef[] = [
     reference: 'Gênesis 6–9',
     unlock: { type: 'distance', meters: 3000 },
     perk: 'Sempre acompanhado da pomba.',
+    gender: 'm',
     look: {
       skin: '#e0ad84',
       hair: '#b9b4ad',
@@ -167,6 +172,7 @@ export const CHARACTERS: CharacterDef[] = [
     reference: 'Gênesis 37–41',
     unlock: { type: 'coins', amount: 6000 },
     perk: 'A túnica mais colorida da história.',
+    gender: 'm',
     look: {
       skin: '#e4b08a',
       hair: '#2b1a10',
@@ -200,6 +206,7 @@ export const CHARACTERS: CharacterDef[] = [
     reference: 'Daniel 1–6',
     unlock: { type: 'scrolls', count: 8 },
     perk: 'Sábio e destemido.',
+    gender: 'm',
     look: {
       skin: '#d39e76',
       hair: '#1f140c',
@@ -233,6 +240,7 @@ export const CHARACTERS: CharacterDef[] = [
     reference: 'Juízes 13–16',
     unlock: { type: 'relics', count: 3 },
     perk: 'Braços de aço e sete tranças.',
+    gender: 'm',
     look: {
       skin: '#c98d62',
       hair: '#2a170b',
@@ -256,6 +264,109 @@ export const CHARACTERS: CharacterDef[] = [
     skins: [
       { id: 'padrao', name: 'Nazireu', relicCost: 0, look: {} },
       { id: 'juiz', name: 'Juiz de Israel', relicCost: 3, look: { tunic: '#b7342b', tunicTrim: '#f0c24a', belt: '#f0c24a' } },
+    ],
+  },
+  {
+    id: 'ester',
+    name: 'Ester',
+    title: 'A rainha corajosa',
+    description: 'Uma jovem judia que se tornou rainha da Pérsia e arriscou a vida para salvar o seu povo.',
+    reference: 'Ester 4–7',
+    unlock: { type: 'coins', amount: 2500 },
+    perk: 'Coragem: as moedas da corrida brilham mais perto.',
+    gender: 'f',
+    look: {
+      skin: '#e6b58c',
+      hair: '#2e1a0e',
+      hairStyle: 'long',
+      beard: 'none',
+      tunic: '#8a3fc9',
+      tunicTrim: '#f2c94c',
+      belt: '#f2c94c',
+      longSleeves: true,
+      robeLength: 'long',
+      bag: false,
+      bagColor: '#000',
+      headwear: 'headband',
+      headwearColor: '#f2c94c',
+      accessory: 'none',
+      cape: '#d94a8c',
+      sandal: baseSandal,
+      bulk: 0.9,
+      headScale: 1.08,
+    },
+    skins: [
+      { id: 'padrao', name: 'Rainha', relicCost: 0, look: {} },
+      { id: 'festa', name: 'Festa de Purim', relicCost: 2, look: { tunic: '#2fa3d9', tunicTrim: '#ffffff', cape: '#ffd23f', belt: '#ffffff' } },
+      { id: 'jardim', name: 'Jardim do Palácio', relicCost: 1, look: { tunic: '#4cbf7a', tunicTrim: '#f6efe0', cape: '#f6efe0' } },
+    ],
+  },
+  {
+    id: 'rute',
+    name: 'Rute',
+    title: 'A amiga fiel',
+    description: 'Deixou a sua terra para cuidar de Noemi e colheu espigas no campo de Boaz.',
+    reference: 'Rute 1–4',
+    unlock: { type: 'coins', amount: 2500 },
+    perk: 'Fidelidade: começa a corrida com um escudo.',
+    gender: 'f',
+    look: {
+      skin: '#d9a070',
+      hair: '#6b3a1c',
+      hairStyle: 'wavy',
+      beard: 'none',
+      tunic: '#7fae4a',
+      tunicTrim: '#f6efe0',
+      belt: '#a8703f',
+      longSleeves: true,
+      robeLength: 'long',
+      bag: true,
+      bagColor: '#c8a060',
+      headwear: 'hood',
+      headwearColor: '#f6efe0',
+      accessory: 'none',
+      sandal: baseSandal,
+      bulk: 0.9,
+      headScale: 1.08,
+    },
+    skins: [
+      { id: 'padrao', name: 'Colhedora', relicCost: 0, look: {} },
+      { id: 'moabita', name: 'Vestido de Moabe', relicCost: 2, look: { tunic: '#d9473a', tunicTrim: '#ffd23f', headwearColor: '#ffd23f' } },
+      { id: 'noiva', name: 'Casamento', relicCost: 3, look: { tunic: '#ffffff', tunicTrim: '#f2c94c', headwearColor: '#ffffff', belt: '#f2c94c' } },
+    ],
+  },
+  {
+    id: 'miria',
+    name: 'Miriã',
+    title: 'A irmã cantora',
+    description: 'Irmã de Moisés: cuidou dele no rio Nilo e liderou o povo cantando após a travessia do mar.',
+    reference: 'Êxodo 2; 15:20-21',
+    unlock: { type: 'coins', amount: 2500 },
+    perk: 'Cântico: a música dobra os pontos por mais tempo.',
+    gender: 'f',
+    look: {
+      skin: '#c98a5e',
+      hair: '#1f1208',
+      hairStyle: 'braids',
+      beard: 'none',
+      tunic: '#2f8fe0',
+      tunicTrim: '#ffd23f',
+      belt: '#d9473a',
+      longSleeves: false,
+      robeLength: 'long',
+      bag: false,
+      bagColor: '#000',
+      headwear: 'headband',
+      headwearColor: '#d9473a',
+      accessory: 'none',
+      sandal: baseSandal,
+      bulk: 0.9,
+      headScale: 1.08,
+    },
+    skins: [
+      { id: 'padrao', name: 'Cantora', relicCost: 0, look: {} },
+      { id: 'nilo', name: 'Margem do Nilo', relicCost: 1, look: { tunic: '#f3e2b5', tunicTrim: '#2f8fe0', belt: '#2f8fe0' } },
+      { id: 'festa', name: 'Dança da Vitória', relicCost: 2, look: { tunic: '#ff7eb3', tunicTrim: '#ffffff', headwearColor: '#ffd23f' } },
     ],
   },
 ];

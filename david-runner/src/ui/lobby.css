@@ -1453,3 +1453,16 @@
 .feat-avatar.portrait {
   box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.55), 0 6px 0 rgba(43, 26, 74, 0.3);
 }
+
+.ob-genders {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+}
+.ob-gender {
+  padding: 14px 8px;
+}
+.ob-gender strong {
+  font-size: 18px;
+}

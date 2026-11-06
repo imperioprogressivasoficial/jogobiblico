@@ -18,6 +18,7 @@ export function OnboardingScreen() {
   const [name, setName] = useState('');
   const [age, setAge] = useState(0);
   const [avatar, setAvatar] = useState('davi');
+  const [gender, setGender] = useState<'m' | 'f' | null>(null);
   const [email, setEmail] = useState('');
   const [pin, setPin] = useState('');
   const [pin2, setPin2] = useState('');
@@ -25,8 +26,8 @@ export function OnboardingScreen() {
 
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
   const pinOk = /^\d{4}$/.test(pin) && pin === pin2;
-  const canNext = [true, name.trim().length >= 2, age > 0, !!avatar, emailOk && pinOk && consent, true][step];
-  const total = 5;
+  const canNext = [true, name.trim().length >= 2, age > 0, !!gender, !!avatar, emailOk && pinOk && consent, true][step];
+  const total = 6;
 
   const next = () => {
     if (!canNext) {
@@ -34,12 +35,12 @@ export function OnboardingScreen() {
       return;
     }
     audio.play('ui');
-    if (step === 4) {
-      progression.createProfile({ childName: name.trim(), age, avatar, parentEmail: email.trim().toLowerCase(), pin, consent });
+    if (step === 5) {
+      progression.createProfile({ childName: name.trim(), age, gender: gender ?? 'm', avatar, parentEmail: email.trim().toLowerCase(), pin, consent });
       progression.grantPack('boas-vindas', WELCOME.coins, WELCOME.talents, true);
       audio.play('victory');
     }
-    if (step === 5) {
+    if (step === 6) {
       UIManager.showMenuScene();
       UIManager.go('menu', true);
       return;
@@ -54,7 +55,7 @@ export function OnboardingScreen() {
         <span>☁️</span>
         <span>⭐</span>
       </div>
-      {step > 0 && step < 5 && (
+      {step > 0 && step < 6 && (
         <div className="ob-progress" aria-hidden="true">
           {Array.from({ length: total - 1 }, (_, i) => (
             <span key={i} className={i < step ? 'on' : ''} />
@@ -112,9 +113,40 @@ export function OnboardingScreen() {
 
         {step === 3 && (
           <>
+            <div className="ob-emoji">🧒</div>
+            <h1 className="ob-title">Você é menino ou menina?</h1>
+            <div className="ob-genders">
+              {(
+                [
+                  ['m', 'Menino', 'davi'],
+                  ['f', 'Menina', 'ester'],
+                ] as const
+              ).map(([g, label, hero]) => (
+                <button
+                  key={g}
+                  type="button"
+                  className={`ob-hero ob-gender ${gender === g ? 'on' : ''}`}
+                  data-testid={`ob-gender-${g}`}
+                  onClick={() => {
+                    audio.play('ui');
+                    setGender(g);
+                    setAvatar(hero);
+                  }}
+                >
+                  <Portrait charId={hero} size={74} className="ob-hero-face" />
+                  <strong>{label}</strong>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {step === 4 && (
+          <>
             <h1 className="ob-title">Escolha o seu herói</h1>
+            <p className="ob-text small">O primeiro é de presente. Os outros você libera jogando!</p>
             <div className="ob-heroes">
-              {CHARACTERS.map((c) => (
+              {CHARACTERS.filter((c) => c.gender === (gender ?? 'm')).map((c) => (
                 <button
                   key={c.id}
                   type="button"
@@ -130,11 +162,11 @@ export function OnboardingScreen() {
                 </button>
               ))}
             </div>
-            <p className="ob-text small">Davi já começa com você. Os outros heróis você libera jogando!</p>
+            <p className="ob-text small">{CHARACTERS.find((c) => c.id === avatar)?.title}</p>
           </>
         )}
 
-        {step === 4 && (
+        {step === 5 && (
           <>
             <div className="ob-emoji">👨‍👩‍👧</div>
             <h1 className="ob-title">Agora chame um adulto</h1>
@@ -161,7 +193,7 @@ export function OnboardingScreen() {
           </>
         )}
 
-        {step === 5 && (
+        {step === 6 && (
           <>
             <div className="ob-emoji ob-bounce">🎉</div>
             <h1 className="ob-title">Tudo pronto, {name.trim()}!</h1>
@@ -179,13 +211,13 @@ export function OnboardingScreen() {
       </div>
 
       <div className="ob-nav">
-        {step > 0 && step < 5 && (
+        {step > 0 && step < 6 && (
           <Btn variant="wood" onClick={() => setStep(step - 1)} sfx="uiBack" testId="ob-back">
             ◀
           </Btn>
         )}
         <Btn variant="green" size="lg" onClick={next} disabled={!canNext} sfx={null} testId="ob-next" className="ob-next">
-          {step === 0 ? 'Criar conta' : step === 4 ? 'Criar conta ✔' : step === 5 ? 'Começar a jogar ▶' : 'Próximo ▶'}
+          {step === 0 ? 'Criar conta' : step === 5 ? 'Criar conta ✔' : step === 6 ? 'Começar a jogar ▶' : 'Próximo ▶'}
         </Btn>
       </div>
     </div>
