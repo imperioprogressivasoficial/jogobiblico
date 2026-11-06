@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { audio } from '../../game/AudioManager';
+import { Confetti } from '../components/Confetti';
 import { getCharacter } from '../../data/characters';
 import { MODES } from '../../data/modes';
 import { progression } from '../../state/ProgressionManager';
@@ -7,6 +9,7 @@ import { UIManager, fmt, useProgress } from '../UIManager';
 import { playMode } from './ModesScreen';
 import { Portrait } from '../art/Portrait';
 import { Icon } from '../art/icons';
+import { Treasure } from '../art/Treasure';
 import { featuredToday } from './ShopScreen';
 
 function untilMidnight(): string {
@@ -34,6 +37,7 @@ export function MainMenu() {
 
   useEffect(() => {
     progression.ensureDailyMissions();
+    progression.ensureDaily();
     const onKey = (e: KeyboardEvent) => {
       if (e.code === 'Enter') playMode(mode);
     };
@@ -58,6 +62,19 @@ export function MainMenu() {
         </button>
         <div className="lobby-top-right">
           <Currency />
+        <button
+          type="button"
+          className="pill pill-btn pill-fire"
+          title={`Poder equipado: ${progression.equippedPower.name}`}
+          data-testid="chariot-charges"
+          onClick={() => {
+            UIManager.shopTab = 'poderes';
+            UIManager.go('shop');
+          }}
+        >
+          {progression.equippedPower.icon} {progression.chariotCharges}
+        </button>
+
           <Btn variant="wood" size="sm" onClick={() => UIManager.go('settings')} title="Configurações" testId="btn-settings">
             <Icon name="settings" size={24} />
           </Btn>
@@ -109,19 +126,6 @@ export function MainMenu() {
         <button type="button" className="lobby-mini" onClick={() => UIManager.go('maps')} data-testid="btn-maps">
           <span><Icon name="map" size={26} tone="#9cf07a" /></span>Mapas
         </button>
-        <button
-          type="button"
-          className="lobby-mini lobby-power"
-          title={`Poder equipado: ${progression.equippedPower.name}`}
-          data-testid="chariot-charges"
-          onClick={() => {
-            UIManager.shopTab = 'poderes';
-            UIManager.go('shop');
-          }}
-        >
-          <span>{progression.equippedPower.icon}</span>
-          {progression.chariotCharges}
-        </button>
       </div>
 
       <button
@@ -153,6 +157,8 @@ export function MainMenu() {
         </span>
       </button>
 
+      <DailyCard />
+
       <div className="lobby-bottom">
         <div className="lobby-hero-name">
           <strong>{char.name}</strong>
@@ -174,6 +180,77 @@ export function MainMenu() {
           </Btn>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Jornada do Dia: história → desafio → corrida, com o Baú do Dia e a sequência de dias. */
+function DailyCard() {
+  const d = progression.data.daily;
+  const story = progression.dailyStory();
+  const mode = MODES.find((m) => m.id === d.challenge) ?? MODES[1];
+  const run = MODES[0];
+  const all = d.story && d.challenge_done && d.run;
+  const [reward, setReward] = useState<{ coins: number; talents: number } | null>(null);
+  const steps = [
+    { done: d.story, icon: 'journey' as const, label: 'História', sub: story.title, go: () => UIManager.startStoryRun(story), testId: 'daily-story' },
+    { done: d.challenge_done, icon: mode.icon, label: 'Desafio', sub: mode.name, go: () => playMode(mode), testId: 'daily-challenge' },
+    { done: d.run, icon: run.icon, label: 'Corrida', sub: '150 m ou mais', go: () => playMode(run), testId: 'daily-run' },
+  ];
+  const next = steps.find((s) => !s.done);
+  return (
+    <div className="daily" data-testid="daily-card">
+      <div className="daily-head">
+        <strong>
+          <Icon name="star" size={16} tone="#ffd23f" stroke="#ffd23f" /> Jornada do Dia
+        </strong>
+        <span className="daily-streak" data-testid="daily-streak">
+          <Icon name="fire" size={16} tone="#ff9a2e" stroke="#ff6a1a" /> {d.streak} {d.streak === 1 ? 'dia' : 'dias'}
+        </span>
+      </div>
+      <div className="daily-steps">
+        {steps.map((s, i) => (
+          <button key={s.label} type="button" className={`daily-step ${s.done ? 'done' : ''} ${next === s ? 'next' : ''}`} data-testid={s.testId} onClick={() => (s.done ? undefined : s.go())}>
+            <span className="daily-step-icon">{s.done ? <Icon name="check" size={20} stroke="#fff" tone="none" /> : <Icon name={s.icon} size={20} />}</span>
+            <span className="daily-step-text">
+              <small>
+                {i + 1}. {s.label}
+              </small>
+              <strong>{s.sub}</strong>
+            </span>
+          </button>
+        ))}
+        <button
+          type="button"
+          className={`daily-chest ${all && !d.chest ? 'ready' : ''} ${d.chest ? 'open' : ''}`}
+          data-testid="daily-chest"
+          disabled={!all || d.chest}
+          onClick={() => {
+            const r = progression.openChest();
+            if (!r) return;
+            audio.play('victory');
+            setReward(r);
+          }}
+        >
+          <Treasure kind={d.chest ? 'bau' : 'bau'} size={44} />
+          <small>{d.chest ? 'Aberto' : all ? 'Abrir!' : 'Baú'}</small>
+        </button>
+      </div>
+      {reward && (
+        <div className="overlay" onClick={() => setReward(null)} data-testid="daily-reward">
+          <Confetti />
+          <div className="panel center">
+            <Treasure kind="bau" size={100} />
+            <h2 className="sign-title">Baú do Dia!</h2>
+            <p>
+              Você completou a Jornada do Dia e ganhou {reward.coins} denários{reward.talents ? ` e ${reward.talents} talento` : ''}. Volte amanhã para manter a sequência!
+            </p>
+            <Btn variant="green" onClick={() => setReward(null)}>
+              Oba! ✔
+            </Btn>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

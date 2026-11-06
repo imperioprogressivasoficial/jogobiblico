@@ -96,6 +96,8 @@ export interface SaveData {
   upgrades: Record<UpgradeDef['id'], number>;
   achievements: Record<string, number>;
   missions: { day: string; list: MissionState[]; multiplierLevel: number; setClaimed: boolean };
+  /** Jornada do Dia: história, desafio e corrida do dia; baú e sequência de dias. */
+  daily: { day: string; storyId: string; challenge: string; story: boolean; challenge_done: boolean; run: boolean; chest: boolean; streak: number; lastDone: string };
   records: RunRecord[];
   settings: Settings;
   tutorialDone: boolean;
@@ -119,6 +121,12 @@ const KEY = 'davidrunner.save.v1';
 /** Denários por acertar o quiz de uma história (só na primeira vez). */
 export const STORY_QUIZ_REWARD = 50;
 type ComputedStat = 'charactersOwned' | 'mapsUnlocked' | 'storiesUnlocked' | 'storiesRead' | 'quizzesDone';
+
+function yesterday(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 function today(): string {
   const d = new Date();
@@ -166,6 +174,7 @@ function defaults(): SaveData {
     upgrades: { magnet: 0, double: 0, shield: 0 },
     achievements: {},
     missions: { day: '', list: [], multiplierLevel: 0, setClaimed: false },
+    daily: { day: '', storyId: '', challenge: 'quiz', story: false, challenge_done: false, run: false, chest: false, streak: 0, lastDone: '' },
     records: [],
     settings: { music: 0.6, sfx: 0.8, sensitivity: 'media', quality: 'auto', vibration: true, showHints: true, difficulty: 'crianca' },
     tutorialDone: false,
@@ -180,6 +189,7 @@ function merge(base: SaveData, loaded: Partial<SaveData>): SaveData {
   out.skins = { ...base.skins, ...(loaded.skins ?? {}) };
   out.selectedSkin = { ...base.selectedSkin, ...(loaded.selectedSkin ?? {}) };
   out.missions = { ...base.missions, ...(loaded.missions ?? {}) };
+  out.daily = { ...base.daily, ...(loaded.daily ?? {}) };
   out.chariot = { ...base.chariot, ...(loaded.chariot ?? {}) };
   out.powers = { ...base.powers, ...(loaded.powers ?? {}) };
   if (!loaded.powers) out.powers.chariot = { ...out.chariot }; // save antigo: a carruagem vira o poder "chariot"
@@ -300,6 +310,53 @@ export class ProgressionManager {
   }
 
   // ------------------------------------------------------------ missões diárias
+  /** Baú do Dia: denários por completar os 3 passos; talento a cada 7 dias de sequência. */
+  static readonly CHEST_COINS = 250;
+
+  /** Garante a Jornada do Dia de hoje (história seguinte não lida + desafio sorteado). */
+  ensureDaily(): void {
+    const day = today();
+    const dl = this.data.daily;
+    if (dl.day === day && dl.storyId) return;
+    // perdeu um dia inteiro sem completar: a sequência zera
+    if (dl.lastDone && dl.lastDone !== day && dl.lastDone !== yesterday()) dl.streak = 0;
+    const rng = new Rng(hashString('dia-' + day));
+    const pool = STORY.filter((s) => this.data.scrolls.includes(s.id) && !this.data.storiesRead.includes(s.id));
+    const story = pool[0] ?? STORY.filter((s) => this.data.scrolls.includes(s.id))[Math.floor(rng.next() * Math.max(1, this.data.scrolls.length))] ?? STORY[0];
+    const modes = ['quiz', 'versiculo', 'memoria', 'funda'];
+    this.data.daily = { ...dl, day, storyId: story.id, challenge: modes[Math.floor(rng.next() * modes.length)], story: false, challenge_done: false, run: false, chest: false };
+    this.commit();
+  }
+
+  dailyStory(): StoryEpisode {
+    this.ensureDaily();
+    return STORY.find((s) => s.id === this.data.daily.storyId) ?? STORY[0];
+  }
+
+  private dailyStep(step: 'story' | 'challenge_done' | 'run'): void {
+    this.ensureDaily();
+    const dl = this.data.daily;
+    if (dl[step]) return;
+    dl[step] = true;
+    if (dl.story && dl.challenge_done && dl.run && dl.lastDone !== dl.day) {
+      dl.streak = dl.lastDone === yesterday() ? dl.streak + 1 : 1;
+      dl.lastDone = dl.day;
+      this.pushToast('🎁', 'Jornada do Dia completa!', `Sequência de ${dl.streak} ${dl.streak === 1 ? 'dia' : 'dias'}. Abra o Baú do Dia no início!`);
+    }
+  }
+
+  /** Abre o Baú do Dia. Devolve { coins, talents } ou null. */
+  openChest(): { coins: number; talents: number } | null {
+    const dl = this.data.daily;
+    if (dl.chest || !(dl.story && dl.challenge_done && dl.run)) return null;
+    dl.chest = true;
+    const talents = dl.streak > 0 && dl.streak % 7 === 0 ? 1 : 0;
+    this.data.coins += ProgressionManager.CHEST_COINS;
+    this.data.relics += talents;
+    this.commit();
+    return { coins: ProgressionManager.CHEST_COINS, talents };
+  }
+
   ensureDailyMissions(): void {
     const day = today();
     const m = this.data.missions;
@@ -659,6 +716,11 @@ export class ProgressionManager {
   }
 
   markStoryRead(id: string): void {
+    if (this.data.daily.storyId === id) {
+      this.dailyStep('story');
+      // a história do dia se revela ao ser vivida (mesmo sem pergaminho)
+      if (STORY_IDS.has(id) && !this.data.scrolls.includes(id)) this.data.scrolls = STORY.filter((s) => this.data.scrolls.includes(s.id) || s.id === id).map((s) => s.id);
+    }
     if (!STORY_IDS.has(id) || this.data.storiesRead.includes(id)) return;
     this.data.storiesRead.push(id);
     this.checkAchievements();
@@ -667,6 +729,7 @@ export class ProgressionManager {
 
   /** Quiz acertado: +50 denários só na primeira vez. Retorna as denários ganhas. */
   completeStoryQuiz(id: string): number {
+    if (this.data.daily.storyId === id) this.dailyStep('story');
     if (!STORY_IDS.has(id) || this.data.storyQuizzes.includes(id)) return 0;
     this.data.storyQuizzes.push(id);
     if (!this.data.storiesRead.includes(id)) this.data.storiesRead.push(id);
@@ -700,6 +763,7 @@ export class ProgressionManager {
   // ------------------------------------------------------------ modos de jogo
   /** Registra uma partida de modo extra; devolve true se for recorde. Dá as denários ganhas. */
   finishMode(id: string, score: number, coins: number): boolean {
+    if (this.data.daily.challenge === id) this.dailyStep('challenge_done');
     const best = this.data.modeBest[id] ?? 0;
     const record = score > best;
     if (record) this.data.modeBest[id] = score;
@@ -751,6 +815,7 @@ export class ProgressionManager {
   // ------------------------------------------------------------ fim de corrida
   applyRun(run: RunStats): RunSummary {
     this.ensureDailyMissions();
+    if (run.distance >= 150) this.dailyStep('run');
     const d = this.data;
     const st = d.stats;
     const distance = Math.floor(run.distance);

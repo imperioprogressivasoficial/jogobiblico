@@ -1466,3 +1466,122 @@
 .ob-gender strong {
   font-size: 18px;
 }
+
+/* ---------------------------------------------------------------- Jornada do Dia */
+.daily {
+  margin-top: auto;
+  margin-bottom: 8px;
+  pointer-events: auto;
+  background: rgba(43, 26, 74, 0.78);
+  border: 3px solid #fff;
+  border-radius: 18px;
+  padding: 8px 10px;
+  color: #fff;
+  box-shadow: var(--card-shadow);
+}
+.daily-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-title);
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+.daily-head strong,
+.daily-streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.daily-streak {
+  background: rgba(255, 154, 46, 0.25);
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+.daily-steps {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 56px;
+  gap: 6px;
+}
+.daily-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 4px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  text-align: center;
+}
+.daily-step.next {
+  background: linear-gradient(#fff6c9, var(--pop-yellow));
+  color: var(--outline);
+  border-color: #fff;
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
+.daily-step.done {
+  background: rgba(76, 217, 100, 0.35);
+  border-color: var(--pop-green);
+}
+.daily-step-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.2);
+}
+.daily-step.done .daily-step-icon {
+  background: var(--pop-green);
+}
+.daily-step-text small {
+  display: block;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+.daily-step-text strong {
+  display: block;
+  font-family: var(--font-title);
+  font-size: 11px;
+  line-height: 1.05;
+  max-height: 24px;
+  overflow: hidden;
+}
+.daily-chest {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-weight: 800;
+  font-size: 11px;
+  opacity: 0.75;
+}
+.daily-chest.ready {
+  opacity: 1;
+  background: linear-gradient(#ffd23f, #ff9a2e);
+  border-color: #fff;
+  color: var(--outline);
+  animation: live-pulse 0.9s ease-in-out infinite;
+}
+.daily-chest.open {
+  opacity: 0.6;
+}
+.lobby .lobby-bottom {
+  margin-top: 6px;
+}
+.lobby-side {
+  gap: 6px;
+}
+.lobby-mini {
+  width: 60px;
+  font-size: 10px;
+}
