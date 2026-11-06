@@ -1,4 +1,5 @@
 import type { Screen } from '../ui/UIManager';
+import type { IconName } from '../ui/art/icons';
 
 /** Os modos de jogo do DAVID RUNNER (a corrida é o principal; os outros são jogos rápidos). */
 export interface GameMode {
@@ -6,16 +7,16 @@ export interface GameMode {
   screen: Screen | 'run';
   name: string;
   tagline: string;
-  icon: string;
+  icon: IconName;
   /** Cores do cartão (degradê). */
   colors: [string, string];
   reference: string;
 }
 
 export const MODES: GameMode[] = [
-  { id: 'corrida', screen: 'run', name: 'Corrida Bíblica', tagline: 'Corra, desvie e junte denários e pergaminhos', icon: '🏃', colors: ['#ffb02e', '#e8590c'], reference: 'Hebreus 12:1' },
-  { id: 'quiz', screen: 'mode-quiz', name: 'Show da Fé', tagline: 'Perguntas e respostas sobre a Bíblia', icon: '❓', colors: ['#6c5ce7', '#3b2fb5'], reference: 'Salmos 119:105' },
-  { id: 'memoria', screen: 'mode-memory', name: 'Memória da Arca', tagline: 'Ache os pares e encha a arca de Noé', icon: '🚢', colors: ['#2ecc71', '#16865a'], reference: 'Gênesis 7' },
-  { id: 'versiculo', screen: 'mode-verse', name: 'Monte o Versículo', tagline: 'Coloque as palavras na ordem certa', icon: '📜', colors: ['#00b4d8', '#0868a8'], reference: 'Salmos 119:11' },
-  { id: 'funda', screen: 'mode-sling', name: 'Funda de Davi', tagline: 'Mire, puxe e acerte o alvo!', icon: '🎯', colors: ['#ff6b8b', '#c2185b'], reference: '1 Samuel 17' },
+  { id: 'corrida', screen: 'run', name: 'Corrida Bíblica', tagline: 'Corra, desvie e junte denários e pergaminhos', icon: 'run', colors: ['#ffb02e', '#e8590c'], reference: 'Hebreus 12:1' },
+  { id: 'quiz', screen: 'mode-quiz', name: 'Show da Fé', tagline: 'Perguntas e respostas sobre a Bíblia', icon: 'quiz', colors: ['#6c5ce7', '#3b2fb5'], reference: 'Salmos 119:105' },
+  { id: 'memoria', screen: 'mode-memory', name: 'Memória da Arca', tagline: 'Ache os pares e encha a arca de Noé', icon: 'memory', colors: ['#2ecc71', '#16865a'], reference: 'Gênesis 7' },
+  { id: 'versiculo', screen: 'mode-verse', name: 'Monte o Versículo', tagline: 'Coloque as palavras na ordem certa', icon: 'verse', colors: ['#00b4d8', '#0868a8'], reference: 'Salmos 119:11' },
+  { id: 'funda', screen: 'mode-sling', name: 'Funda de Davi', tagline: 'Mire, puxe e acerte o alvo!', icon: 'sling', colors: ['#ff6b8b', '#c2185b'], reference: '1 Samuel 17' },
 ];

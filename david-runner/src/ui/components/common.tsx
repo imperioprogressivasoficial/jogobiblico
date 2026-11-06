@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { audio, type Sfx } from '../../game/AudioManager';
 import { progression } from '../../state/ProgressionManager';
 import { UIManager, fmt, useProgress } from '../UIManager';
+import { Icon } from '../art/icons';
 
 export function Btn(props: {
   children: ReactNode;
@@ -75,11 +76,11 @@ export function Currency() {
     <div className="currency">
       <button type="button" className="pill pill-btn pill-buy" data-testid="coins-total" title="Denários" onClick={openPacks}>
         <CoinIcon /> {fmt(d.coins)}
-        <span className="pill-plus">+</span>
+        <span className="pill-plus"><Icon name="plus" size={14} stroke="#fff" tone="none" /></span>
       </button>
       <button type="button" className="pill pill-btn pill-buy" data-testid="talents-total" title="Talentos" onClick={openPacks}>
         <RelicIcon /> {fmt(d.relics)}
-        <span className="pill-plus">+</span>
+        <span className="pill-plus"><Icon name="plus" size={14} stroke="#fff" tone="none" /></span>
       </button>
       <span className="pill pill-mult" title="Multiplicador de pontuação">
         x{progression.baseMultiplier}
@@ -92,7 +93,7 @@ export function TopBar({ title, right }: { title: string; right?: ReactNode }) {
   return (
     <header className="topbar">
       <Btn variant="wood" size="sm" sfx={null} onClick={() => UIManager.back()} title="Voltar" testId="back">
-        ←
+        <Icon name="back" size={24} />
       </Btn>
       <h2 className="sign-title">{title}</h2>
       <div className="topbar-right">{right ?? <Currency />}</div>

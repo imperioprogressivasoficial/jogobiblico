@@ -3,6 +3,7 @@ import { MODES, type GameMode } from '../../data/modes';
 import { progression } from '../../state/ProgressionManager';
 import { TopBar } from '../components/common';
 import { UIManager, fmt, useProgress } from '../UIManager';
+import { Icon } from '../art/icons';
 
 export function playMode(m: GameMode): void {
   audio.play('buy');
@@ -31,13 +32,25 @@ export function ModesScreen() {
                 data-testid={`mode-${m.id}`}
                 onClick={() => playMode(m)}
               >
-                <span className="mode-icon">{m.icon}</span>
+                <span className="mode-icon">
+                  <Icon name={m.icon} size={i === 0 ? 64 : 54} tone="rgba(255,255,255,0.35)" />
+                </span>
                 <span className="mode-text">
                   <strong>{m.name}</strong>
                   <small>{m.tagline}</small>
                 </span>
-                <span className="mode-best">{rec > 0 ? `🏆 ${fmt(rec)}` : 'NOVO'}</span>
-                <span className="mode-play">▶</span>
+                <span className="mode-best">
+                  {rec > 0 ? (
+                    <>
+                      <Icon name="trophy" size={14} /> {fmt(rec)}
+                    </>
+                  ) : (
+                    'NOVO'
+                  )}
+                </span>
+                <span className="mode-play">
+                  <Icon name="play" size={18} tone="currentColor" />
+                </span>
               </button>
             );
           })}

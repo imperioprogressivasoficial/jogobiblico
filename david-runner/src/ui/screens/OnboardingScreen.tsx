@@ -4,6 +4,7 @@ import { CHARACTERS } from '../../data/characters';
 import { progression } from '../../state/ProgressionManager';
 import { Btn, CoinIcon, Logo, RelicIcon } from '../components/common';
 import { UIManager } from '../UIManager';
+import { Portrait } from '../art/Portrait';
 
 /** Presente de boas-vindas ao criar a conta. */
 const WELCOME = { coins: 300, talents: 3 };
@@ -124,9 +125,7 @@ export function OnboardingScreen() {
                     setAvatar(c.id);
                   }}
                 >
-                  <span className="ob-hero-face" style={{ background: c.look.tunic, borderColor: c.look.tunicTrim }}>
-                    {c.name[0]}
-                  </span>
+                  <Portrait charId={c.id} size={58} className="ob-hero-face" />
                   <strong>{c.name}</strong>
                 </button>
               ))}

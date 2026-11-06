@@ -1,3 +1,4 @@
+import type { VergeKind } from '../game/scenery/verge';
 import type { ObstacleCatalog } from '../game/TrackGenerator';
 import type { Palette } from '../game/models/props';
 
@@ -20,6 +21,8 @@ export interface MapTheme {
   sideProps: { id: string; weight: number }[];
   catalog: ObstacleCatalog;
   backdrop: string;
+  /** Faixa de cenário colada ao meio-fio (ver game/scenery/verge.ts). */
+  verge: VergeKind;
   bunting: boolean;
 }
 
@@ -101,6 +104,7 @@ export const MAPS: MapDef[] = [
         trainCar: { id: 'carroca', length: 3.5 },
       },
       backdrop: 'jerusalem',
+      verge: 'cidade',
       bunting: true,
     },
   },
@@ -161,6 +165,7 @@ export const MAPS: MapDef[] = [
         trainCar: { id: 'carroca', length: 3.5 },
       },
       backdrop: 'deserto',
+      verge: 'deserto',
       bunting: false,
     },
   },
@@ -220,6 +225,7 @@ export const MAPS: MapDef[] = [
         trainCar: { id: 'carroca', length: 3.5 },
       },
       backdrop: 'vale',
+      verge: 'campo',
       bunting: false,
     },
   },
@@ -279,6 +285,7 @@ export const MAPS: MapDef[] = [
         trainCar: { id: 'carroca', length: 3.5 },
       },
       backdrop: 'egito',
+      verge: 'nilo',
       bunting: false,
     },
   },
@@ -337,6 +344,7 @@ export const MAPS: MapDef[] = [
         trainCar: { id: 'carroca', length: 3.5 },
       },
       backdrop: 'babilonia',
+      verge: 'babilonia',
       bunting: true,
     },
   },

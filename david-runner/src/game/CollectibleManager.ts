@@ -27,11 +27,13 @@ const MAX_COINS = 320;
 function coinGeometry(): THREE.BufferGeometry {
   const b = new GeoBuilder(0);
   // moeda de frente para o jogador (eixo em z)
-  b.cyl(0.42, 0.42, 0.1, 16, '#e8a514', { rot: [Math.PI / 2, 0, 0] });
-  b.cyl(0.34, 0.34, 0.13, 16, '#ffd23f', { rot: [Math.PI / 2, 0, 0] });
-  // coroa em relevo
-  b.box(0.3, 0.08, 0.16, '#fff1a0', { pos: [0, -0.08, 0] });
-  for (const x of [-0.12, 0, 0.12]) b.cone(0.06, 0.16, 4, '#fff1a0', { pos: [x, 0.04, 0], scale: [1, 1, 1.3] });
+  // denário de prata: borda escura grossa, face clara e perfil de César com coroa de louros em relevo
+  b.cyl(0.44, 0.44, 0.12, 18, '#7d8794', { rot: [Math.PI / 2, 0, 0] });
+  b.cyl(0.37, 0.37, 0.15, 18, '#e6ebf2', { rot: [Math.PI / 2, 0, 0] });
+  b.sphere(0.13, 8, 6, '#b8c2cf', { pos: [-0.02, 0.05, 0], scale: [0.9, 1.1, 0.5] });
+  b.box(0.16, 0.14, 0.06, '#b8c2cf', { pos: [0, -0.11, 0.04] });
+  b.torus(0.17, 0.028, 5, 10, '#8fbf6a', { pos: [-0.02, 0.07, 0.075], rot: [0, 0, 0.3] }, Math.PI * 1.3);
+  b.box(0.05, 0.05, 0.03, '#ffffff', { pos: [-0.2, 0.25, 0.09] });
   return b.build();
 }
 

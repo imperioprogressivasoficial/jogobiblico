@@ -7,6 +7,7 @@ import { SIDE_FACTORIES, buntingGeometry } from './models/scenery';
 import { Atmosphere } from './Atmosphere';
 import { makeRoadTexture, makeSideTexture } from './textures';
 import { Rng } from './rng';
+import { buildVerge } from './scenery/verge';
 
 interface Slot {
   mesh: THREE.Mesh | null;
@@ -17,17 +18,21 @@ interface Segment {
   group: THREE.Group;
   slots: Slot[];
   bunting: THREE.Mesh | null;
+  verge: THREE.Mesh | null;
 }
 
 const SEGMENTS_AHEAD = 7;
 const SEGMENTS_BEHIND = 2;
 const SEGMENT_COUNT = SEGMENTS_AHEAD + SEGMENTS_BEHIND;
 /** Posições (z local) e lados dos props laterais em cada segmento. */
-const SLOT_LAYOUT: { side: -1 | 1; z: number }[] = [
+const SLOT_LAYOUT: { side: -1 | 1; z: number; far?: boolean }[] = [
   { side: -1, z: -6 },
   { side: -1, z: 6 },
   { side: 1, z: -6 },
   { side: 1, z: 6 },
+  // segunda fileira, mais afastada e maior: dá profundidade entre a rua e o horizonte
+  { side: -1, z: 0, far: true },
+  { side: 1, z: 0, far: true },
 ];
 
 /**
@@ -48,6 +53,7 @@ export class EnvironmentManager {
   private roadGeo: THREE.BufferGeometry;
   private sideGeo: THREE.BufferGeometry;
   private curbGeo: THREE.BufferGeometry | null = null;
+  private vergeGeos: THREE.BufferGeometry[] = [];
   private roadMat = new THREE.MeshLambertMaterial();
   private sideMat = new THREE.MeshLambertMaterial();
   private rng = new Rng(2024);
@@ -82,7 +88,7 @@ export class EnvironmentManager {
       side.receiveShadow = true;
       group.add(road, side);
       this.root.add(group);
-      this.segments.push({ group, slots: SLOT_LAYOUT.map(() => ({ mesh: null, id: null })), bunting: null });
+      this.segments.push({ group, slots: SLOT_LAYOUT.map(() => ({ mesh: null, id: null })), bunting: null, verge: null });
     }
   }
 
@@ -110,6 +116,10 @@ export class EnvironmentManager {
     }
     this.curbGeo = cb.build();
 
+    // beira da pista (duas variações, alternadas)
+    for (const g of this.vergeGeos) g.dispose();
+    this.vergeGeos = [0, 1].map((v) => buildVerge(theme.verge, theme.palette, v));
+
     // props laterais
     for (const seg of this.segments) {
       for (const slot of seg.slots) {
@@ -125,6 +135,11 @@ export class EnvironmentManager {
       m.userData.curb = true;
       m.receiveShadow = true;
       seg.group.add(m);
+      if (seg.verge) seg.verge.removeFromParent();
+      seg.verge = new THREE.Mesh(this.vergeGeos[0], Materials.prop);
+      seg.verge.receiveShadow = true;
+      seg.verge.castShadow = true;
+      seg.group.add(seg.verge);
     }
     for (const g of this.propGeos.values()) g.dispose();
     this.propGeos.clear();
@@ -173,15 +188,20 @@ export class EnvironmentManager {
       if (slot.mesh) this.releaseProp(slot.mesh);
       const id = this.pickProp();
       const m = this.acquireProp(id);
-      m.position.set(layout.side * (ROAD_HALF_WIDTH + 1.6 + this.rng.range(0, 1.2)), 0, layout.z + this.rng.range(-1.5, 1.5));
+      if (layout.far) {
+        m.position.set(layout.side * (ROAD_HALF_WIDTH + 11 + this.rng.range(0, 5)), 0, layout.z + this.rng.range(-8, 8));
+      } else {
+        m.position.set(layout.side * (ROAD_HALF_WIDTH + 3.4 + this.rng.range(0, 1.4)), 0, layout.z + this.rng.range(-1.5, 1.5));
+      }
       m.rotation.set(0, layout.side === 1 ? Math.PI : 0, 0);
-      const s = this.rng.range(0.9, 1.1);
+      const s = layout.far ? this.rng.range(1.35, 1.7) : this.rng.range(0.9, 1.1);
       m.scale.set(s, s, s);
       m.updateMatrix();
       seg.group.add(m);
       slot.mesh = m;
       slot.id = id;
     });
+    if (seg.verge) seg.verge.geometry = this.vergeGeos[this.rng.int(0, 1)];
     if (seg.bunting) {
       seg.bunting.removeFromParent();
       this.buntingPool.push(seg.bunting);

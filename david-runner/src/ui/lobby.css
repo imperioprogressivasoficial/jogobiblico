@@ -85,6 +85,7 @@
   white-space: nowrap;
 }
 .lobby-name small {
+  white-space: nowrap;
   font-size: 11px;
   opacity: 0.85;
 }
@@ -367,7 +368,7 @@
   padding: 10px 8px;
   border-radius: 18px;
   border: 3px solid #fff;
-  background: linear-gradient(170deg, color-mix(in srgb, var(--feat) 55%, #fff), var(--feat));
+  background: linear-gradient(170deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0) 45%, rgba(0, 0, 0, 0.16)), var(--feat);
   box-shadow: var(--card-shadow);
   color: #fff;
   text-align: center;
@@ -1373,4 +1374,82 @@
   .lobby .lobby-play {
     animation: none;
   }
+}
+
+/* ---------------------------------------------------------------- retratos e ícones */
+.portrait {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  overflow: hidden;
+  border: 3px solid #fff;
+  box-shadow: 0 3px 0 rgba(43, 26, 74, 0.35);
+  flex: 0 0 auto;
+}
+.portrait-circle {
+  border-radius: 50%;
+}
+.portrait-rounded {
+  border-radius: 22%;
+}
+.portrait img {
+  width: 118%;
+  height: 118%;
+  object-fit: cover;
+  object-position: 50% 10%;
+  margin-top: 8%;
+  pointer-events: none;
+}
+.portrait-fallback {
+  font-family: var(--font-title);
+  color: #fff;
+  font-size: 1.4em;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
+}
+.ico {
+  vertical-align: -0.18em;
+  flex: 0 0 auto;
+}
+.lobby-tab,
+.tabs .tab,
+.featured-head strong,
+.featured-timer,
+.lsc-head,
+.lsc-timer,
+.mode-best,
+.pill-plus {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.lobby-mini > span:first-child {
+  display: grid;
+  place-items: center;
+  height: 28px;
+}
+.mode-icon {
+  transform: rotate(6deg);
+  color: #fff;
+  opacity: 0.95;
+}
+.mode-play {
+  display: grid;
+  place-items: center;
+}
+.pack-art,
+.feat-banner-art {
+  display: grid;
+  place-items: center;
+}
+.pack-art svg {
+  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.22));
+}
+.lobby-avatar.portrait {
+  border-width: 2px;
+}
+.shop-avatar.portrait {
+  font-size: 20px;
+}
+.feat-avatar.portrait {
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.55), 0 6px 0 rgba(43, 26, 74, 0.3);
 }

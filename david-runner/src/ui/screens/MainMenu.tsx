@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { getCharacter } from '../../data/characters';
-import { getMap } from '../../data/maps';
 import { MODES } from '../../data/modes';
 import { progression } from '../../state/ProgressionManager';
 import { Btn, Currency, RelicIcon } from '../components/common';
 import { UIManager, fmt, useProgress } from '../UIManager';
 import { playMode } from './ModesScreen';
+import { Portrait } from '../art/Portrait';
+import { Icon } from '../art/icons';
 import { featuredToday } from './ShopScreen';
 
 function untilMidnight(): string {
@@ -24,7 +25,6 @@ export function MainMenu() {
   useProgress();
   const d = progression.data;
   const char = getCharacter(d.selectedCharacter);
-  const map = getMap(d.selectedMap);
   const claimable = d.missions.list.filter((m) => m.progress >= m.target && !m.claimed).length;
   const unread = progression.unreadStories().length;
   const mode = MODES.find((m) => m.id === UIManager.selectedMode) ?? MODES[0];
@@ -50,9 +50,7 @@ export function MainMenu() {
     <div className="screen menu lobby" data-testid="main-menu">
       <header className="lobby-top">
         <button type="button" className="lobby-profile" onClick={() => UIManager.go('settings')} data-testid="lobby-profile">
-          <span className="lobby-avatar" style={{ background: avatar.look.tunic, borderColor: avatar.look.tunicTrim }}>
-            {avatar.name[0]}
-          </span>
+          <Portrait charId={avatar.id} skinId={d.selectedSkin[avatar.id] ?? 'padrao'} size={44} className="lobby-avatar" />
           <span className="lobby-name">
             <strong>{profile?.childName ?? 'Jogador'}</strong>
             <small>Recorde {fmt(d.stats.bestScore)}</small>
@@ -61,17 +59,17 @@ export function MainMenu() {
         <div className="lobby-top-right">
           <Currency />
           <Btn variant="wood" size="sm" onClick={() => UIManager.go('settings')} title="Configurações" testId="btn-settings">
-            ⚙️
+            <Icon name="settings" size={24} />
           </Btn>
         </div>
       </header>
 
       <nav className="lobby-tabs">
         <button type="button" className="lobby-tab on">
-          🏠 Início
+          <Icon name="home" size={20} tone="rgba(43,26,74,0.18)" /> Início
         </button>
         <button type="button" className="lobby-tab" onClick={() => UIManager.go('modes')} data-testid="btn-modes">
-          🎮 Modos
+          <Icon name="modes" size={20} /> Modos
         </button>
         <button
           type="button"
@@ -82,10 +80,10 @@ export function MainMenu() {
           }}
           data-testid="btn-shop"
         >
-          🛒 Loja<span className="lobby-new">NOVO</span>
+          <Icon name="shop" size={20} /> Loja<span className="lobby-new">NOVO</span>
         </button>
         <button type="button" className="lobby-tab" onClick={() => UIManager.go('journey')} data-testid="btn-journey">
-          📖 Jornada
+          <Icon name="journey" size={20} /> Jornada
           {unread > 0 && (
             <span className="badge badge-new" data-testid="journey-unread">
               {unread}
@@ -93,23 +91,23 @@ export function MainMenu() {
           )}
         </button>
         <button type="button" className="lobby-tab" onClick={() => UIManager.go('characters')} data-testid="btn-characters">
-          🧑 Heróis
+          <Icon name="heroes" size={20} /> Heróis
         </button>
       </nav>
 
       <div className="lobby-side lobby-left">
         <button type="button" className="lobby-mini" onClick={() => UIManager.go('missions')} data-testid="btn-missions">
-          <span>🎯</span>Missões
+          <span><Icon name="missions" size={26} tone="#ff8a5c" /></span>Missões
           {claimable > 0 && <span className="badge">{claimable}</span>}
         </button>
         <button type="button" className="lobby-mini" onClick={() => UIManager.go('achievements')} data-testid="btn-achievements">
-          <span>🏆</span>Conquistas
+          <span><Icon name="trophy" size={26} tone="#ffd23f" /></span>Conquistas
         </button>
         <button type="button" className="lobby-mini" onClick={() => UIManager.go('records')} data-testid="btn-records">
-          <span>📊</span>Recordes
+          <span><Icon name="records" size={26} tone="#7ee0ff" /></span>Recordes
         </button>
         <button type="button" className="lobby-mini" onClick={() => UIManager.go('maps')} data-testid="btn-maps">
-          <span>{map.emoji}</span>Mapas
+          <span><Icon name="map" size={26} tone="#9cf07a" /></span>Mapas
         </button>
         <button
           type="button"
@@ -135,11 +133,13 @@ export function MainMenu() {
         }}
         data-testid="lobby-shopcard"
       >
-        <span className="lsc-head">⭐ Loja do Dia</span>
+        <span className="lsc-head">
+          <Icon name="star" size={16} tone="#ffd23f" stroke="#ffd23f" /> Loja do Dia
+        </span>
         {feat && (
-          <span className="lsc-item" style={{ background: { ...feat.c.look, ...feat.s.look }.tunic }}>
+          <span className="lsc-item">
             <span className="lsc-ribbon">-40%</span>
-            <span className="lsc-face">{feat.c.name[0]}</span>
+            <Portrait charId={feat.c.id} skinId={feat.s.id} size={84} shape="rounded" />
           </span>
         )}
         {feat && <span className="lsc-name">{feat.s.name}</span>}
@@ -148,7 +148,9 @@ export function MainMenu() {
             <RelicIcon size={14} /> {feat.price}
           </span>
         )}
-        <span className="lsc-timer">⏱️ {left}</span>
+        <span className="lsc-timer">
+          <Icon name="timer" size={12} /> {left}
+        </span>
       </button>
 
       <div className="lobby-bottom">
@@ -159,7 +161,7 @@ export function MainMenu() {
         <div className="lobby-play">
           <button type="button" className="lobby-mode" onClick={() => UIManager.go('modes')} data-testid="lobby-mode">
             <span className="lobby-mode-icon" style={{ background: `linear-gradient(160deg, ${mode.colors[0]}, ${mode.colors[1]})` }}>
-              {mode.icon}
+              <Icon name={mode.icon} size={26} />
             </span>
             <span>
               <small>Modo</small>

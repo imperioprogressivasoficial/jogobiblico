@@ -78,8 +78,8 @@ function goldify(mat: THREE.MeshStandardMaterial): THREE.MeshStandardMaterial {
       '#include <color_fragment>',
       `#include <color_fragment>
 	// denário de prata: tons do desenho original convertidos em prata clara (levemente azulada)
-	float drLum = dot( pow( max( diffuseColor.rgb, vec3( 1e-4 ) ), vec3( 0.5 ) ), vec3( 0.3, 0.55, 0.15 ) );
-	diffuseColor.rgb = vec3( 0.55 + drLum * 0.5 ) * vec3( 0.93, 0.96, 1.0 );`,
+	// cores do desenho mantidas (prata clara/escura e louro verde), só um leve toque frio
+	diffuseColor.rgb = mix( diffuseColor.rgb, diffuseColor.rgb * vec3( 0.95, 0.98, 1.05 ), 0.6 );`,
       )
       .replace(
         '#include <opaque_fragment>',
@@ -88,7 +88,7 @@ function goldify(mat: THREE.MeshStandardMaterial): THREE.MeshStandardMaterial {
 		float drNV = saturate( dot( normal, normalize( vViewPosition ) ) );
 		float drGlint = pow( drNV, 28.0 );
 		float drEdge = pow( 1.0 - drNV, 2.5 );
-		outgoingLight += diffuseColor.rgb * ( drGlint * 1.6 + drEdge * 0.9 );
+		outgoingLight += diffuseColor.rgb * ( drGlint * 0.9 ) + vec3( 0.04 ) * drEdge;
 	}
 	#include <opaque_fragment>`,
       );
@@ -169,10 +169,10 @@ export const Materials = {
   coin: goldify(
     new THREE.MeshStandardMaterial({
       vertexColors: true,
-      metalness: 1,
-      roughness: 0.3,
-      emissive: new THREE.Color(0x1c2230),
-      envMapIntensity: 2.0,
+      metalness: 0.35,
+      roughness: 0.42,
+      emissive: new THREE.Color(0x2a3140),
+      envMapIntensity: 0.6,
     }),
   ),
   glow: new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.85, depthWrite: false }),
