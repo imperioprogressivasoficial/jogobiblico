@@ -27,6 +27,7 @@ const RUN = (seed, extra = {}) => ({
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
   const skip = (sec) => page.evaluate((sec) => { const e = window.__davidRunner.engine; e.autopilot = true; e.simulate(sec); e.autopilot = false; }, sec);
+  await page.addInitScript(() => { try { if (!localStorage.getItem('davidrunner.save.v1')) localStorage.setItem('davidrunner.save.v1', JSON.stringify({ profile: { childName: 'Teste', age: 7, avatar: 'davi', parentEmail: 't@t.com', pin: '1234', consent: true, createdAt: '' } })); } catch {} });
   await page.goto(URL);
   await page.waitForSelector('[data-testid=tap-to-start]');
   await page.click('[data-testid=splash]');
@@ -179,7 +180,7 @@ const RUN = (seed, extra = {}) => ({
   // loja: comprar carga
   await page.evaluate(() => { window.__davidRunner.progression.data.coins = 1000; window.__davidRunner.progression.updateSettings({}); });
   await page.click('[data-testid=btn-shop]');
-  await page.click('[data-testid=tab-poderes]');
+  await page.$eval('[data-testid=tab-poderes]', (e) => e.click());
   await page.click('[data-testid=buy-charge-chariot]');
   const bought = await page.evaluate(() => ({ c: window.__davidRunner.progression.data.powers.chariot.charges, coins: window.__davidRunner.progression.data.coins }));
   assert(bought.c === 1 && bought.coins === 750, `comprar carga na loja (cargas=${bought.c}, moedas=${bought.coins})`);

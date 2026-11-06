@@ -15,7 +15,7 @@ import { UIManager, fmt, useProgress } from '../UIManager';
 type Phase = 'playing' | 'paused' | 'countdown' | 'revive' | 'results';
 
 const POWER_INFO: Record<PowerType, { icon: string; name: string; color: string }> = {
-  magnet: { icon: '🧲', name: 'Ímã de Moedas', color: '#e2574c' },
+  magnet: { icon: '🧲', name: 'Ímã de Denários', color: '#e2574c' },
   double: { icon: '🎵', name: 'Harpa Dourada x2', color: '#f2c13a' },
   shield: { icon: '🛡️', name: 'Escudo da Fé', color: '#4fa3ff' },
 };
@@ -100,9 +100,9 @@ export function GameScreen() {
         if (e.type === 'scroll') {
           // cada pergaminho revela a próxima história (as desta corrida ainda não foram salvas)
           const story = progression.nextLockedStory(Math.max(0, engine.score.run.scrolls - 1));
-          showBanner(story ? `📜 Nova história: ${story.title}!` : '📜 Pergaminho encontrado! +100 moedas');
+          showBanner(story ? `📜 Nova história: ${story.title}!` : '📜 Pergaminho encontrado! +100 denários');
         }
-        else if (e.type === 'relic') showBanner('💎 Relíquia rara encontrada!');
+        else if (e.type === 'relic') showBanner('💎 Talento raro encontrado!');
         else if (e.type !== 'coin') showBanner(`${POWER_INFO[e.type].icon} ${POWER_INFO[e.type].name}`);
       }),
       engine.on('stumble', () => showBanner('⚠️ Cuidado!')),
@@ -208,7 +208,7 @@ export function GameScreen() {
   function revive() {
     const cost = REVIVE_COST[revivesUsed.current];
     const stats = pendingStats.current!;
-    // as moedas da corrida atual também podem pagar o resgate
+    // as denários da corrida atual também podem pagar o resgate
     if (progression.data.coins < cost) {
       const missing = cost - progression.data.coins;
       if (stats.coins < missing) return;
@@ -408,7 +408,7 @@ export function GameScreen() {
         <div className="overlay" data-testid="revive-screen">
           <div className="panel panel-revive">
             <h2 className="sign-title">Continuar?</h2>
-            <p>Use suas moedas para continuar a corrida de onde parou.</p>
+            <p>Use seus denários para continuar a corrida de onde parou.</p>
             <div className="revive-timer">
               <Progress value={reviveLeft / 5} />
             </div>
@@ -477,7 +477,7 @@ function Results({
             <strong>{fmt(st.distance)} m</strong>
           </div>
           <div>
-            <span className="rg-label">Moedas</span>
+            <span className="rg-label">Denários</span>
             <strong>
               <CoinIcon size={18} /> {fmt(st.coins)}
             </strong>
@@ -509,7 +509,7 @@ function Results({
             </div>
           </div>
         ))}
-        {summary.scrollCoins > 0 && <p className="results-note">Você já revelou todas as histórias: +{summary.scrollCoins} moedas!</p>}
+        {summary.scrollCoins > 0 && <p className="results-note">Você já revelou todas as histórias: +{summary.scrollCoins} denários!</p>}
 
         {(summary.unlockedCharacters.length > 0 || summary.unlockedMaps.length > 0) && (
           <div className="results-unlocks">

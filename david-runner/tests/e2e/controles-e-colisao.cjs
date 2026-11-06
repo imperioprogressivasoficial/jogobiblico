@@ -2,6 +2,7 @@ const { chromium } = require('playwright');
 (async () => {
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   const page = await browser.newPage({ viewport: { width: 800, height: 600 } });
+  await page.addInitScript(() => { try { if (!localStorage.getItem('davidrunner.save.v1')) localStorage.setItem('davidrunner.save.v1', JSON.stringify({ profile: { childName: 'Teste', age: 7, avatar: 'davi', parentEmail: 't@t.com', pin: '1234', consent: true, createdAt: '' } })); } catch {} });
   await page.goto((process.env.URL || 'http://localhost:4173/'));
   await page.waitForFunction(() => window.__davidRunner && window.__davidRunner.engine);
   const res = await page.evaluate(() => {

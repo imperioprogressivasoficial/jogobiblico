@@ -15,9 +15,9 @@ export interface PowerEffects {
   smash: boolean;
   /** Obstáculos à frente na pista do herói se afastam para os lados. */
   part: boolean;
-  /** Atrai as moedas. */
+  /** Atrai os denários. */
   magnet: boolean;
-  /** Moedas valem o dobro e a pontuação dobra. */
+  /** Denários valem o dobro e a pontuação dobra. */
   doubleCoins: boolean;
   /** Uso instantâneo: lança uma pedra que destrói o obstáculo à frente. */
   stone: boolean;
@@ -140,7 +140,7 @@ export const POWERS: PowerDef[] = [
     icon: '🎵',
     reference: '1 Samuel 16:23',
     quote: 'Davi tomava a harpa e a tocava; então Saul sentia alívio e ficava bom.',
-    description: 'A música atrai todas as moedas e cada uma vale o dobro. Pontuação em dobro também!',
+    description: 'A música atrai todos os denários e cada um vale o dobro. Pontuação em dobro também!',
     color: '#facc15',
     glow: 0xfde68a,
     kind: 'timed',

@@ -16,7 +16,16 @@ export type Screen =
   | 'achievements'
   | 'missions'
   | 'settings'
-  | 'journey';
+  | 'journey'
+  | 'onboarding'
+  | 'modes'
+  | 'mode-quiz'
+  | 'mode-memory'
+  | 'mode-verse'
+  | 'mode-sling'
+  | 'coins-info';
+
+export type ShopTab = 'destaque' | 'moedas' | 'herois' | 'trajes' | 'melhorias' | 'poderes';
 
 /** Navegação entre telas + acesso ao motor 3D compartilhado. */
 class UIManagerImpl {
@@ -90,13 +99,16 @@ class UIManagerImpl {
       if (e && e.mode === 'playing') e.pause();
       return true;
     }
+    if (this.screen === 'onboarding') return true;
     if (this.screen === 'menu' || this.screen === 'splash') return false;
     this.back();
     return true;
   }
 
   /** Aba inicial da Loja (o botão de poderes do menu abre direto em "Poderes"). */
-  shopTab: 'herois' | 'trajes' | 'melhorias' | 'poderes' = 'herois';
+  shopTab: ShopTab = 'destaque';
+  /** Modo escolhido no lobby (o botão JOGAR abre este modo). */
+  selectedMode = 'corrida';
 
   /** História sendo vivida na corrida atual (modo "Viver a história"); null numa corrida normal. */
   storyRun: StoryEpisode | null = null;

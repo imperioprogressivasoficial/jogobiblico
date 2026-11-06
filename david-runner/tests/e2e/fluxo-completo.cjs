@@ -8,6 +8,7 @@ const assert = (c, m) => { if (!c) { console.log('FALHOU: ' + m); process.exitCo
   const errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  await page.addInitScript(() => { try { if (!localStorage.getItem('davidrunner.save.v1')) localStorage.setItem('davidrunner.save.v1', JSON.stringify({ profile: { childName: 'Teste', age: 7, avatar: 'davi', parentEmail: 't@t.com', pin: '1234', consent: true, createdAt: '' } })); } catch {} });
   await page.goto((process.env.URL || 'http://localhost:4173/'));
   await page.waitForSelector('[data-testid=tap-to-start]');
   await page.click('[data-testid=splash]');
@@ -79,8 +80,9 @@ const assert = (c, m) => { if (!c) { console.log('FALHOU: ' + m); process.exitCo
   // 6) Loja: comprar Moisés e uma melhoria
   await page.evaluate(() => { window.__davidRunner.progression.data.coins = 5000; window.__davidRunner.progression.updateSettings({}); });
   await page.click('[data-testid=btn-shop]');
+  await page.$eval('[data-testid=tab-herois]', (e) => e.click());
   await page.click('[data-testid=buy-moises]');
-  await page.click('[data-testid=tab-melhorias]');
+  await page.$eval('[data-testid=tab-melhorias]', (e) => e.click());
   await page.click('[data-testid=upgrade-magnet]');
   let p = await page.evaluate(() => { const d = window.__davidRunner.progression.data; return { chars: d.characters, mag: d.upgrades.magnet, coins: d.coins, sel: d.selectedCharacter }; });
   assert(p.chars.includes('moises') && p.mag === 1 && p.coins === 5000 - 2500 + 300 - 400 && p.sel === 'moises', 'compra de herói e melhoria debitam moedas (+300 da conquista Novo Herói)');

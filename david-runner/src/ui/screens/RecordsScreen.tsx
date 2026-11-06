@@ -22,7 +22,7 @@ export function RecordsScreen() {
             <strong>{fmt(st.bestDistance)} m</strong>
           </div>
           <div>
-            <span className="rg-label">Mais moedas</span>
+            <span className="rg-label">Mais denários</span>
             <strong>{fmt(st.bestCoinsRun)}</strong>
           </div>
         </div>
@@ -71,11 +71,11 @@ export function RecordsScreen() {
         <div className="totals">
           <div>Corridas<strong>{fmt(st.totalRuns)}</strong></div>
           <div>Distância total<strong>{fmt(st.totalDistance)} m</strong></div>
-          <div>Moedas coletadas<strong>{fmt(st.totalCoins)}</strong></div>
+          <div>Denários coletadas<strong>{fmt(st.totalCoins)}</strong></div>
           <div>Pulos<strong>{fmt(st.totalJumps)}</strong></div>
           <div>Deslizes<strong>{fmt(st.totalSlides)}</strong></div>
           <div>Pergaminhos<strong>{fmt(st.totalScrolls)}</strong></div>
-          <div>Relíquias<strong>{fmt(st.totalRelics)}</strong></div>
+          <div>Talentos<strong>{fmt(st.totalRelics)}</strong></div>
           <div>Power-ups<strong>{fmt(st.totalPowerups)}</strong></div>
         </div>
       </div>

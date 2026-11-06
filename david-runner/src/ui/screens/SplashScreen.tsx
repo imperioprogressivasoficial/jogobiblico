@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { audio } from '../../game/AudioManager';
 import { Logo } from '../components/common';
+import { progression } from '../../state/ProgressionManager';
 import { UIManager } from '../UIManager';
 
 export function SplashScreen() {
@@ -28,7 +29,8 @@ export function SplashScreen() {
     audio.unlock();
     audio.play('ui');
     UIManager.showMenuScene();
-    UIManager.go('menu', true);
+    // primeira abertura: cadastro da conta
+    UIManager.go(progression.data.profile ? 'menu' : 'onboarding', true);
   };
 
   useEffect(() => {

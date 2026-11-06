@@ -12,6 +12,13 @@ import { RecordsScreen } from './ui/screens/RecordsScreen';
 import { SettingsScreen } from './ui/screens/SettingsScreen';
 import { ShopScreen } from './ui/screens/ShopScreen';
 import { SplashScreen } from './ui/screens/SplashScreen';
+import { OnboardingScreen } from './ui/screens/OnboardingScreen';
+import { ModesScreen } from './ui/screens/ModesScreen';
+import { CoinsInfoScreen } from './ui/screens/CoinsInfoScreen';
+import { QuizMode } from './ui/screens/modes/QuizMode';
+import { MemoryMode } from './ui/screens/modes/MemoryMode';
+import { VerseMode } from './ui/screens/modes/VerseMode';
+import { SlingMode } from './ui/screens/modes/SlingMode';
 
 export function App() {
   const screen = useScreen();
@@ -30,6 +37,13 @@ export function App() {
         {screen === 'missions' && <MissionsScreen />}
         {screen === 'settings' && <SettingsScreen />}
         {screen === 'journey' && <JourneyScreen />}
+        {screen === 'onboarding' && <OnboardingScreen />}
+        {screen === 'modes' && <ModesScreen />}
+        {screen === 'coins-info' && <CoinsInfoScreen />}
+        {screen === 'mode-quiz' && <QuizMode />}
+        {screen === 'mode-memory' && <MemoryMode />}
+        {screen === 'mode-verse' && <VerseMode />}
+        {screen === 'mode-sling' && <SlingMode />}
       </div>
       <Toasts />
     </div>

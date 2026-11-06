@@ -77,7 +77,9 @@ function goldify(mat: THREE.MeshStandardMaterial): THREE.MeshStandardMaterial {
     shader.fragmentShader = shader.fragmentShader.replace(
       '#include <color_fragment>',
       `#include <color_fragment>
-	diffuseColor.rgb = pow( max( diffuseColor.rgb, vec3( 1e-4 ) ), vec3( 0.5 ) ) * vec3( 1.0, 0.95, 0.78 );`,
+	// denário de prata: tons do desenho original convertidos em prata clara (levemente azulada)
+	float drLum = dot( pow( max( diffuseColor.rgb, vec3( 1e-4 ) ), vec3( 0.5 ) ), vec3( 0.3, 0.55, 0.15 ) );
+	diffuseColor.rgb = vec3( 0.55 + drLum * 0.5 ) * vec3( 0.93, 0.96, 1.0 );`,
       )
       .replace(
         '#include <opaque_fragment>',
@@ -163,14 +165,14 @@ export const Materials = {
     fragmentShader: CLOUD_FRAG,
     fog: false,
   }),
-  /** Ouro metálico de verdade: reflete o céu (envMap ligado pela Atmosfera). */
+  /** Prata metálica (denário romano): reflete o céu (envMap ligado pela Atmosfera). */
   coin: goldify(
     new THREE.MeshStandardMaterial({
       vertexColors: true,
       metalness: 1,
       roughness: 0.3,
-      emissive: new THREE.Color(0x3a2200),
-      envMapIntensity: 1.8,
+      emissive: new THREE.Color(0x1c2230),
+      envMapIntensity: 2.0,
     }),
   ),
   glow: new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.85, depthWrite: false }),

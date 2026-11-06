@@ -43,8 +43,28 @@ export interface MissionState {
   claimed: boolean;
 }
 
+/** Conta do jogador: a criança joga, o responsável cuida das compras (PIN). */
+export interface Profile {
+  childName: string;
+  age: number;
+  /** Herói escolhido como avatar. */
+  avatar: string;
+  parentEmail: string;
+  /** PIN de 4 dígitos do responsável, pedido antes de qualquer compra. */
+  pin: string;
+  /** O responsável aceitou os termos e a política de privacidade. */
+  consent: boolean;
+  createdAt: string;
+}
+
 export interface SaveData {
   version: 1;
+  /** Conta criada no cadastro (null até a primeira abertura). */
+  profile: Profile | null;
+  /** Melhor pontuação em cada modo de jogo. */
+  modeBest: Record<string, number>;
+  /** Pacotes da loja já comprados (ids), para pacotes de compra única. */
+  purchases: string[];
   coins: number;
   relics: number;
   stats: Record<Exclude<StatKey, ComputedStat>, number>;
@@ -55,7 +75,7 @@ export interface SaveData {
   storyCredits: number;
   /** Histórias lidas até o fim. */
   storiesRead: string[];
-  /** Quizzes acertados (as moedas do quiz são dadas só na primeira vez). */
+  /** Quizzes acertados (as denários do quiz são dadas só na primeira vez). */
   storyQuizzes: string[];
   /** Carruagem de Fogo (compatibilidade com saves antigos; o estado atual está em `powers.chariot`). */
   chariot: { charges: number; level: number };
@@ -94,7 +114,7 @@ export interface RunSummary {
 }
 
 const KEY = 'davidrunner.save.v1';
-/** Moedas por acertar o quiz de uma história (só na primeira vez). */
+/** Denários por acertar o quiz de uma história (só na primeira vez). */
 export const STORY_QUIZ_REWARD = 50;
 type ComputedStat = 'charactersOwned' | 'mapsUnlocked' | 'storiesUnlocked' | 'storiesRead' | 'quizzesDone';
 
@@ -106,6 +126,9 @@ function today(): string {
 function defaults(): SaveData {
   return {
     version: 1,
+    profile: null,
+    modeBest: {},
+    purchases: [],
     coins: 0,
     relics: 0,
     stats: {
@@ -342,7 +365,7 @@ export class ProgressionManager {
       m.multiplierLevel = Math.min(MAX_MULTIPLIER - 1, m.multiplierLevel + 1);
       this.data.stats.missionSets++;
       this.data.relics += 1;
-      this.pushToast('✖️', 'Multiplicador aumentado!', `Agora sua pontuação é x${this.baseMultiplier}. Você ganhou 1 relíquia!`);
+      this.pushToast('✖️', 'Multiplicador aumentado!', `Agora sua pontuação é x${this.baseMultiplier}. Você ganhou 1 talento!`);
     }
     this.checkAchievements();
     this.commit();
@@ -367,7 +390,7 @@ export class ProgressionManager {
         this.data.achievements[a.id] = Date.now();
         this.data.coins += a.reward;
         out.push(a);
-        this.pushToast(a.icon, `Conquista: ${a.name}`, `+${a.reward} moedas`);
+        this.pushToast(a.icon, `Conquista: ${a.name}`, `+${a.reward} denários`);
       }
     }
     return out;
@@ -382,9 +405,9 @@ export class ProgressionManager {
       case 'free':
         return { owned: false, canUnlock: true, label: 'Grátis', progress: 1 };
       case 'coins':
-        return { owned, canUnlock: this.data.coins >= u.amount, label: `${u.amount.toLocaleString('pt-BR')} moedas`, progress: Math.min(1, this.data.coins / u.amount) };
+        return { owned, canUnlock: this.data.coins >= u.amount, label: `${u.amount.toLocaleString('pt-BR')} denários`, progress: Math.min(1, this.data.coins / u.amount) };
       case 'relics':
-        return { owned, canUnlock: this.data.relics >= u.count, label: `${u.count} relíquias`, progress: Math.min(1, this.data.relics / u.count) };
+        return { owned, canUnlock: this.data.relics >= u.count, label: `${u.count} talentos`, progress: Math.min(1, this.data.relics / u.count) };
       case 'distance':
         return {
           owned,
@@ -454,7 +477,7 @@ export class ProgressionManager {
       owned: false,
       canUnlockFree: best >= u.meters,
       canBuy: this.data.coins >= u.coins,
-      label: `Corra ${u.meters.toLocaleString('pt-BR')} m em ${req.name} ou pague ${u.coins.toLocaleString('pt-BR')} moedas`,
+      label: `Corra ${u.meters.toLocaleString('pt-BR')} m em ${req.name} ou pague ${u.coins.toLocaleString('pt-BR')} denários`,
       progress: Math.min(1, best / u.meters),
     };
   }
@@ -573,7 +596,7 @@ export class ProgressionManager {
     return this.buyPowerUpgrade(this.data.equippedPower);
   }
 
-  /** Desbloqueio: grátis, pela história revelada, ou pagando moedas. */
+  /** Desbloqueio: grátis, pela história revelada, ou pagando denários. */
   powerUnlockStatus(id: string): { unlocked: boolean; byStory: boolean; canBuy: boolean; label: string } {
     const def = getPower(id);
     if (this.isPowerUnlocked(id)) return { unlocked: true, byStory: false, canBuy: false, label: 'Desbloqueado' };
@@ -583,7 +606,7 @@ export class ProgressionManager {
       unlocked: false,
       byStory: this.data.scrolls.includes(u.storyId),
       canBuy: this.data.coins >= u.coins,
-      label: `Revele a história “${u.storyTitle}” ou pague ${u.coins.toLocaleString('pt-BR')} moedas`,
+      label: `Revele a história “${u.storyTitle}” ou pague ${u.coins.toLocaleString('pt-BR')} denários`,
     };
   }
 
@@ -640,7 +663,7 @@ export class ProgressionManager {
     this.commit();
   }
 
-  /** Quiz acertado: +50 moedas só na primeira vez. Retorna as moedas ganhas. */
+  /** Quiz acertado: +50 denários só na primeira vez. Retorna as denários ganhas. */
   completeStoryQuiz(id: string): number {
     if (!STORY_IDS.has(id) || this.data.storyQuizzes.includes(id)) return 0;
     this.data.storyQuizzes.push(id);
@@ -649,6 +672,56 @@ export class ProgressionManager {
     this.checkAchievements();
     this.commit();
     return STORY_QUIZ_REWARD;
+  }
+
+  // ------------------------------------------------------------ conta
+  createProfile(p: Omit<Profile, 'createdAt'>): void {
+    this.data.profile = { ...p, createdAt: new Date().toISOString() };
+    if (CHARACTERS.some((c) => c.id === p.avatar) && this.data.characters.includes(p.avatar)) this.data.selectedCharacter = p.avatar;
+    this.commit();
+  }
+
+  updateProfile(p: Partial<Profile>): void {
+    if (!this.data.profile) return;
+    this.data.profile = { ...this.data.profile, ...p };
+    this.commit();
+  }
+
+  checkPin(pin: string): boolean {
+    return !!this.data.profile && this.data.profile.pin === pin;
+  }
+
+  // ------------------------------------------------------------ modos de jogo
+  /** Registra uma partida de modo extra; devolve true se for recorde. Dá as denários ganhas. */
+  finishMode(id: string, score: number, coins: number): boolean {
+    const best = this.data.modeBest[id] ?? 0;
+    const record = score > best;
+    if (record) this.data.modeBest[id] = score;
+    this.data.coins += Math.max(0, Math.floor(coins));
+    this.data.stats.totalCoins += Math.max(0, Math.floor(coins));
+    this.commit();
+    return record;
+  }
+
+  // ------------------------------------------------------------ loja
+  /** Credita um pacote de denários/talentos (a cobrança é feita pela loja do aparelho). */
+  grantPack(id: string, coins: number, relics: number, once = false): boolean {
+    if (once && this.data.purchases.includes(id)) return false;
+    this.data.coins += coins;
+    this.data.relics += relics;
+    if (!this.data.purchases.includes(id)) this.data.purchases.push(id);
+    this.commit();
+    return true;
+  }
+
+  /** Compra uma roupa em destaque com desconto, pagando em talentos. */
+  buySkinFor(characterId: string, skinId: string, price: number): boolean {
+    const own = this.data.skins[characterId] ?? [];
+    if (own.includes(skinId) || this.data.relics < price) return false;
+    this.data.relics -= price;
+    this.data.skins[characterId] = [...own, skinId];
+    this.commit();
+    return true;
   }
 
   spendCoins(n: number): boolean {

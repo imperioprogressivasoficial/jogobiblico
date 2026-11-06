@@ -6,6 +6,7 @@ import '@fontsource/nunito/latin-800.css';
 import '@fontsource/nunito/latin-900.css';
 import './styles.css';
 import './ui/jornada.css';
+import './ui/lobby.css';
 import { initNative } from './platform/native';
 import { UIManager } from './ui/UIManager';
 import { registerServiceWorker } from './platform/pwa';

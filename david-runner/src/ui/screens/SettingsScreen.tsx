@@ -37,6 +37,25 @@ export function SettingsScreen() {
     <div className="screen list-screen" data-testid="settings-screen">
       <TopBar title="Configurações" right={<span />} />
       <div className="scroll-area">
+        {progression.data.profile && (
+          <section className="settings-group" data-testid="settings-account">
+            <h3 className="section-title">👤 Conta</h3>
+            <div className="setting-row">
+              <span>Jogador</span>
+              <span className="setting-val">
+                {progression.data.profile.childName}, {progression.data.profile.age} anos
+              </span>
+            </div>
+            <div className="setting-row">
+              <span>Responsável</span>
+              <span className="setting-val">{progression.data.profile.parentEmail}</span>
+            </div>
+            <div className="setting-row">
+              <span>Compras protegidas por PIN</span>
+              <span className="setting-val">✔ Ativo</span>
+            </div>
+          </section>
+        )}
         <section className="settings-group">
           <h3 className="section-title">Áudio</h3>
           <label className="setting-row">
@@ -180,7 +199,7 @@ export function SettingsScreen() {
             </Btn>
           ) : (
             <div className="confirm-row">
-              <span>Tem certeza? Moedas, recordes e desbloqueios serão apagados.</span>
+              <span>Tem certeza? Denários, recordes e desbloqueios serão apagados.</span>
               <Btn
                 variant="red"
                 size="sm"

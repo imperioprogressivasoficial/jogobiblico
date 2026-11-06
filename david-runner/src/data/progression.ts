@@ -38,9 +38,9 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: 'a_500m', name: 'Pés Ligeiros', description: 'Alcance 500 m em uma corrida.', icon: '🥉', stat: 'bestDistance', goal: 500, reward: 100 },
   { id: 'a_1500m', name: 'Fôlego de Pastor', description: 'Alcance 1.500 m em uma corrida.', icon: '🥈', stat: 'bestDistance', goal: 1500, reward: 300 },
   { id: 'a_4000m', name: 'Maratonista da Fé', description: 'Alcance 4.000 m em uma corrida.', icon: '🥇', stat: 'bestDistance', goal: 4000, reward: 1000 },
-  { id: 'a_100moedas', name: 'Bolsa Cheia', description: 'Colete 100 moedas em uma corrida.', icon: '👛', stat: 'bestCoinsRun', goal: 100, reward: 150 },
-  { id: 'a_400moedas', name: 'Tesouro do Rei', description: 'Colete 400 moedas em uma corrida.', icon: '👑', stat: 'bestCoinsRun', goal: 400, reward: 600 },
-  { id: 'a_5000total', name: 'Mercador de Jerusalém', description: 'Acumule 5.000 moedas coletadas.', icon: '💰', stat: 'totalCoins', goal: 5000, reward: 500 },
+  { id: 'a_100moedas', name: 'Bolsa Cheia', description: 'Colete 100 denários em uma corrida.', icon: '👛', stat: 'bestCoinsRun', goal: 100, reward: 150 },
+  { id: 'a_400moedas', name: 'Tesouro do Rei', description: 'Colete 400 denários em uma corrida.', icon: '👑', stat: 'bestCoinsRun', goal: 400, reward: 600 },
+  { id: 'a_5000total', name: 'Mercador de Jerusalém', description: 'Acumule 5.000 denários coletadas.', icon: '💰', stat: 'totalCoins', goal: 5000, reward: 500 },
   { id: 'a_pontos', name: 'Pontuação de Gigante', description: 'Faça 25.000 pontos em uma corrida.', icon: '⭐', stat: 'bestScore', goal: 25000, reward: 500 },
   { id: 'a_pergaminho', name: 'Estudioso', description: 'Encontre seu primeiro pergaminho.', icon: '📜', stat: 'totalScrolls', goal: 1, reward: 100 },
   {
@@ -63,7 +63,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     reward: 400,
   },
   { id: 'a_carruagem', name: 'Carro de Fogo', description: 'Chame a Carruagem de Fogo pela primeira vez.', icon: '🔥', stat: 'totalBoosts', goal: 1, reward: 100 },
-  { id: 'a_reliquia', name: 'Achado Raro', description: 'Encontre uma relíquia.', icon: '💎', stat: 'totalRelics', goal: 1, reward: 200 },
+  { id: 'a_reliquia', name: 'Achado Raro', description: 'Encontre um talento.', icon: '💎', stat: 'totalRelics', goal: 1, reward: 200 },
   { id: 'a_pulos', name: 'Saltador', description: 'Pule 300 vezes.', icon: '🦘', stat: 'totalJumps', goal: 300, reward: 250 },
   { id: 'a_deslizes', name: 'Escorregadio', description: 'Deslize 200 vezes.', icon: '🛷', stat: 'totalSlides', goal: 200, reward: 250 },
   { id: 'a_poderes', name: 'Bênçãos em Dobro', description: 'Pegue 25 power-ups.', icon: '✨', stat: 'totalPowerups', goal: 25, reward: 300 },
@@ -98,8 +98,8 @@ export interface MissionTemplate {
 const fmt = (n: number) => n.toLocaleString('pt-BR');
 
 export const MISSION_POOL: MissionTemplate[] = [
-  { id: 'm_coins_run', metric: 'coinsRun', base: 60, step: 25, text: (n) => `Colete ${fmt(n)} moedas em uma corrida`, reward: 150 },
-  { id: 'm_coins_total', metric: 'coinsTotal', base: 250, step: 100, text: (n) => `Colete ${fmt(n)} moedas no total`, reward: 200 },
+  { id: 'm_coins_run', metric: 'coinsRun', base: 60, step: 25, text: (n) => `Colete ${fmt(n)} denários em uma corrida`, reward: 150 },
+  { id: 'm_coins_total', metric: 'coinsTotal', base: 250, step: 100, text: (n) => `Colete ${fmt(n)} denários no total`, reward: 200 },
   { id: 'm_dist_run', metric: 'distanceRun', base: 600, step: 250, text: (n) => `Corra ${fmt(n)} m em uma corrida`, reward: 200 },
   { id: 'm_dist_total', metric: 'distanceTotal', base: 2000, step: 800, text: (n) => `Corra ${fmt(n)} m no total`, reward: 200 },
   { id: 'm_jumps', metric: 'jumpsTotal', base: 25, step: 10, text: (n) => `Pule ${fmt(n)} vezes`, reward: 120 },
@@ -124,7 +124,7 @@ export interface UpgradeDef {
 }
 
 export const UPGRADES: UpgradeDef[] = [
-  { id: 'magnet', name: 'Ímã de Moedas', description: 'Atrai as moedas das três pistas.', icon: '🧲', baseDuration: 10, perLevel: 2.5, costs: [400, 900, 1800, 3500, 6000] },
+  { id: 'magnet', name: 'Ímã de Denários', description: 'Atrai os denários das três pistas.', icon: '🧲', baseDuration: 10, perLevel: 2.5, costs: [400, 900, 1800, 3500, 6000] },
   { id: 'double', name: 'Harpa Dourada', description: 'Pontuação em dobro enquanto ativa.', icon: '🎵', baseDuration: 10, perLevel: 2.5, costs: [500, 1100, 2200, 4000, 7000] },
   { id: 'shield', name: 'Escudo da Fé', description: 'Protege de uma colisão.', icon: '🛡️', baseDuration: 12, perLevel: 3, costs: [500, 1100, 2200, 4000, 7000] },
 ];

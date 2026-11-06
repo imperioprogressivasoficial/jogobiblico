@@ -12,6 +12,7 @@ const ARGS = ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swif
 const RUN = (mapId, characterId, seed) => ({ mapId, characterId, skinId: 'padrao', baseMultiplier: 1, durations: { magnet: 10, double: 10, shield: 12 }, seed });
 
 async function enter(page) {
+  await page.addInitScript(() => { try { if (!localStorage.getItem('davidrunner.save.v1')) localStorage.setItem('davidrunner.save.v1', JSON.stringify({ profile: { childName: 'Teste', age: 7, avatar: 'davi', parentEmail: 't@t.com', pin: '1234', consent: true, createdAt: '' } })); } catch {} });
   await page.goto(URL);
   await page.waitForSelector('[data-testid=tap-to-start]', { timeout: 30000 });
   await page.click('[data-testid=splash]');

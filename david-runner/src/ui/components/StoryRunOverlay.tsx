@@ -137,7 +137,7 @@ export function StoryRunOverlay({
     progression.markStoryRead(story.id);
     audio.play('victory');
     setCard({ kind: 'done', reward });
-    speak(reward > 0 ? `Muito bem! Você ganhou ${reward} moedas. Continue correndo!` : 'Muito bem! Continue correndo!');
+    speak(reward > 0 ? `Muito bem! Você ganhou ${reward} denários. Continue correndo!` : 'Muito bem! Continue correndo!');
     window.setTimeout(() => {
       holdRef.current = false;
       onResume();

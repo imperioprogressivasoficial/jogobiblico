@@ -34,24 +34,38 @@ export function Btn(props: {
   );
 }
 
+/** Denário de prata: moeda romana com o perfil de César e a coroa de louros. */
 export function CoinIcon({ size = 22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true" className="coin-icon">
-      <circle cx="16" cy="16" r="15" fill="#e8a514" />
-      <circle cx="16" cy="16" r="12" fill="#ffd23f" />
-      <path d="M9 20h14l1.5-9-4.5 3.5L16 9l-4 5.5L7.5 11z" fill="#fff1a0" stroke="#c98a0a" strokeWidth="1" />
+      <circle cx="16" cy="16" r="15" fill="#8d97a8" />
+      <circle cx="16" cy="16" r="12.5" fill="#e4e9f0" />
+      <circle cx="16" cy="16" r="12.5" fill="none" stroke="#b7c0cd" strokeWidth="1.2" strokeDasharray="1.4 1.6" />
+      <path d="M13 23c-1.5-2-2-4.5-1-7 .8-2.2 2.8-4 5.2-4 2 0 3.3 1.3 3.3 3 0 1-.5 1.7-.2 2.6l1 1.6-1.4.4c0 1.6-.8 2.6-2.4 2.6H15.5L15 23z" fill="#9aa5b6" />
+      <path d="M12.2 14.5c1.4-.9 2.4-1.2 3.6-1M12 17c1.5-.9 2.6-1.1 3.6-.9" stroke="#5f8f45" strokeWidth="1.3" strokeLinecap="round" fill="none" />
+      <ellipse cx="11.5" cy="10.5" rx="3" ry="1.6" fill="#fff" opacity=".7" transform="rotate(-35 11.5 10.5)" />
     </svg>
   );
 }
 
+/** Talento de ouro: a maior medida de dinheiro da Bíblia (lingote/disco dourado). */
 export function RelicIcon({ size = 22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
-      <path d="M16 2 28 12 16 30 4 12z" fill="#9b4bd9" />
-      <path d="M16 2 22 12 16 30 10 12z" fill="#c77dff" />
-      <path d="M4 12h24L16 2z" fill="#e2b3ff" opacity=".7" />
+      <path d="M5 21 9 11h14l4 10z" fill="#c98a0a" />
+      <path d="M9 11h14l-2.2 6H11.2z" fill="#ffd23f" />
+      <path d="M5 21h22l-2 4H7z" fill="#a86f05" />
+      <path d="M11 12.5h5l-.8 2.5h-5z" fill="#fff6c2" opacity=".85" />
+      <path d="M24 4l.9 2.1L27 7l-2.1.9L24 10l-.9-2.1L21 7l2.1-.9z" fill="#fff" />
     </svg>
   );
+}
+
+function openPacks() {
+  audio.play('ui');
+  UIManager.shopTab = 'moedas';
+  if (UIManager.screen === 'shop') UIManager.go('menu', true);
+  UIManager.go('shop');
 }
 
 export function Currency() {
@@ -59,12 +73,14 @@ export function Currency() {
   const d = progression.data;
   return (
     <div className="currency">
-      <span className="pill" data-testid="coins-total">
+      <button type="button" className="pill pill-btn pill-buy" data-testid="coins-total" title="Denários" onClick={openPacks}>
         <CoinIcon /> {fmt(d.coins)}
-      </span>
-      <span className="pill">
+        <span className="pill-plus">+</span>
+      </button>
+      <button type="button" className="pill pill-btn pill-buy" data-testid="talents-total" title="Talentos" onClick={openPacks}>
         <RelicIcon /> {fmt(d.relics)}
-      </span>
+        <span className="pill-plus">+</span>
+      </button>
       <span className="pill pill-mult" title="Multiplicador de pontuação">
         x{progression.baseMultiplier}
       </span>

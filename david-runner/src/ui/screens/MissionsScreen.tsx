@@ -34,7 +34,7 @@ export function MissionsScreen() {
           <div>
             <strong>Multiplicador de pontuação</strong>
             <p>
-              Complete e resgate as 3 missões do dia para aumentar o multiplicador em +1 e ganhar 1 <RelicIcon size={14} /> relíquia.
+              Complete e resgate as 3 missões do dia para aumentar o multiplicador em +1 e ganhar 1 <RelicIcon size={14} /> talento.
               Cada missão resgatada também dá <strong>+1 🔥 Carruagem de Fogo</strong>.
             </p>
             <small className="muted">Novas missões em {timeToMidnight()}</small>
