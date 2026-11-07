@@ -110,7 +110,7 @@ export function NpcBubbles() {
       {pos
         .filter((p) => p.depth < 1 && p.x > -0.1 && p.x < 1.1)
         .map((p) => (
-          <div key={p.id} className="npc-anchor" style={{ left: `${Math.min(0.72, Math.max(0.28, p.x)) * 100}%`, top: `${Math.min(0.6, Math.max(0.22, p.y)) * 100}%` }}>
+          <div key={p.id} className="npc-anchor" style={{ left: `${Math.min(0.68, Math.max(0.32, p.x)) * 100}%`, top: `${Math.min(0.6, Math.max(0.22, p.y)) * 100}%` }}>
             {bubble?.id === p.id ? (
               <button
                 type="button"

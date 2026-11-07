@@ -5,25 +5,20 @@ import { NpcBubbles } from '../components/NpcBubbles';
 import { getCharacter } from '../../data/characters';
 import { MODES } from '../../data/modes';
 import { progression } from '../../state/ProgressionManager';
-import { Btn, Currency, RelicIcon } from '../components/common';
-import { UIManager, fmt, useProgress } from '../UIManager';
+import { Btn, Currency } from '../components/common';
+import { UIManager, useProgress, type Screen } from '../UIManager';
 import { playMode } from './ModesScreen';
 import { Portrait } from '../art/Portrait';
-import { Icon } from '../art/icons';
+import { Icon, type IconName } from '../art/icons';
 import { Treasure } from '../art/Treasure';
 import { featuredToday } from './ShopScreen';
 
-function untilMidnight(): string {
-  const now = new Date();
-  const end = new Date(now);
-  end.setHours(24, 0, 0, 0);
-  const m = Math.max(0, Math.floor((end.getTime() - now.getTime()) / 60000));
-  return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}min`;
-}
-
 /**
- * Lobby: herói no centro (cena 3D por trás), conta e moedas no topo,
- * abas de navegação, a Loja do Dia sempre visível e o botão JOGAR com o modo escolhido.
+ * Lobby, com pouca coisa na tela de uma vez:
+ * - topo: perfil e moedas;
+ * - centro: o herói (3D) com um só cartão pequeno da Loja do Dia;
+ * - embaixo: a Jornada do Dia em uma linha, o modo + JOGAR e a barra de navegação.
+ * O resto (heróis, mapas, missões, conquistas, recordes, pais, configurações) fica em "Mais".
  */
 export function MainMenu() {
   useProgress();
@@ -33,8 +28,8 @@ export function MainMenu() {
   const unread = progression.unreadStories().length;
   const mode = MODES.find((m) => m.id === UIManager.selectedMode) ?? MODES[0];
   const feat = featuredToday().skins[0];
-  const [left, setLeft] = useState(untilMidnight());
   const profile = d.profile;
+  const [more, setMore] = useState(false);
 
   useEffect(() => {
     progression.ensureDailyMissions();
@@ -43,150 +38,150 @@ export function MainMenu() {
       if (e.code === 'Enter') playMode(mode);
     };
     window.addEventListener('keydown', onKey);
-    const h = window.setInterval(() => setLeft(untilMidnight()), 30000);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      clearInterval(h);
-    };
+    return () => window.removeEventListener('keydown', onKey);
   }, [mode]);
 
+  const go = (s: Screen) => {
+    setMore(false);
+    UIManager.go(s);
+  };
   const avatar = getCharacter(profile?.avatar ?? d.selectedCharacter);
+  const moreItems: { id: Screen; icon: IconName; label: string; testId: string; badge?: number }[] = [
+    { id: 'maps', icon: 'map', label: 'Mapas', testId: 'btn-maps' },
+    { id: 'missions', icon: 'missions', label: 'Missões', testId: 'btn-missions', badge: claimable },
+    { id: 'achievements', icon: 'trophy', label: 'Conquistas', testId: 'btn-achievements' },
+    { id: 'records', icon: 'records', label: 'Recordes', testId: 'btn-records' },
+    { id: 'parents', icon: 'family', label: 'Pais', testId: 'btn-parents-menu' },
+    { id: 'settings', icon: 'settings', label: 'Ajustes', testId: 'btn-settings' },
+  ];
+
   return (
     <div className="screen menu lobby" data-testid="main-menu">
       <NpcBubbles />
       <header className="lobby-top">
         <button type="button" className="lobby-profile" onClick={() => UIManager.go('parents')} data-testid="lobby-profile">
-          <Portrait charId={avatar.id} skinId={d.selectedSkin[avatar.id] ?? 'padrao'} size={44} className="lobby-avatar" />
+          <Portrait charId={avatar.id} skinId={d.selectedSkin[avatar.id] ?? 'padrao'} size={40} className="lobby-avatar" />
           <span className="lobby-name">
             <strong>{profile?.childName ?? 'Jogador'}</strong>
-            <small>Recorde {fmt(d.stats.bestScore)}</small>
           </span>
         </button>
-        <div className="lobby-top-right">
-          <Currency />
-        <button
-          type="button"
-          className="pill pill-btn pill-fire"
-          title={`Poder equipado: ${progression.equippedPower.name}`}
-          data-testid="chariot-charges"
-          onClick={() => {
-            UIManager.shopTab = 'poderes';
-            UIManager.go('shop');
-          }}
-        >
-          {progression.equippedPower.icon} {progression.chariotCharges}
-        </button>
-
-          <Btn variant="wood" size="sm" onClick={() => UIManager.go('settings')} title="Configurações" testId="btn-settings">
-            <Icon name="settings" size={24} />
-          </Btn>
-        </div>
+        <Currency />
       </header>
-
-      <nav className="lobby-tabs">
-        <button type="button" className="lobby-tab on">
-          <Icon name="home" size={20} tone="rgba(43,26,74,0.18)" /> Início
-        </button>
-        <button type="button" className="lobby-tab" onClick={() => UIManager.go('modes')} data-testid="btn-modes">
-          <Icon name="modes" size={20} /> Modos
-        </button>
-        <button
-          type="button"
-          className="lobby-tab lobby-tab-shop"
-          onClick={() => {
-            UIManager.shopTab = 'destaque';
-            UIManager.go('shop');
-          }}
-          data-testid="btn-shop"
-        >
-          <Icon name="shop" size={20} /> Loja<span className="lobby-new">NOVO</span>
-        </button>
-        <button type="button" className="lobby-tab" onClick={() => UIManager.go('journey')} data-testid="btn-journey">
-          <Icon name="journey" size={20} /> Jornada
-          {unread > 0 && (
-            <span className="badge badge-new" data-testid="journey-unread">
-              {unread}
-            </span>
-          )}
-        </button>
-        <button type="button" className="lobby-tab" onClick={() => UIManager.go('characters')} data-testid="btn-characters">
-          <Icon name="heroes" size={20} /> Heróis
-        </button>
-      </nav>
-
-      <div className="lobby-side lobby-left">
-        <button type="button" className="lobby-mini" onClick={() => UIManager.go('missions')} data-testid="btn-missions">
-          <span><Icon name="missions" size={26} tone="#ff8a5c" /></span>Missões
-          {claimable > 0 && <span className="badge">{claimable}</span>}
-        </button>
-        <button type="button" className="lobby-mini" onClick={() => UIManager.go('achievements')} data-testid="btn-achievements">
-          <span><Icon name="trophy" size={26} tone="#ffd23f" /></span>Conquistas
-        </button>
-        <button type="button" className="lobby-mini" onClick={() => UIManager.go('records')} data-testid="btn-records">
-          <span><Icon name="records" size={26} tone="#7ee0ff" /></span>Recordes
-        </button>
-        <button type="button" className="lobby-mini" onClick={() => UIManager.go('maps')} data-testid="btn-maps">
-          <span><Icon name="map" size={26} tone="#9cf07a" /></span>Mapas
-        </button>
-      </div>
 
       <button
         type="button"
-        className="lobby-shopcard"
+        className="lobby-shopcard lobby-shopcard-mini"
         onClick={() => {
           UIManager.shopTab = 'destaque';
           UIManager.go('shop');
         }}
         data-testid="lobby-shopcard"
       >
-        <span className="lsc-head">
-          <Icon name="star" size={16} tone="#ffd23f" stroke="#ffd23f" /> Loja do Dia
-        </span>
         {feat && (
           <span className="lsc-item">
             <span className="lsc-ribbon">-40%</span>
-            <Portrait charId={feat.c.id} skinId={feat.s.id} size={84} shape="rounded" />
+            <Portrait charId={feat.c.id} skinId={feat.s.id} size={54} shape="rounded" />
           </span>
         )}
-        {feat && <span className="lsc-name">{feat.s.name}</span>}
-        {feat && (
-          <span className="lsc-price">
-            <RelicIcon size={14} /> {feat.price}
-          </span>
-        )}
-        <span className="lsc-timer">
-          <Icon name="timer" size={12} /> {left}
-        </span>
+        <span className="lsc-head">Loja do Dia</span>
       </button>
+
+      <div className="lobby-hero-name">
+        <strong>{char.name}</strong>
+        <small>{char.title}</small>
+      </div>
 
       <DailyCard />
 
-      <div className="lobby-bottom">
-        <div className="lobby-hero-name">
-          <strong>{char.name}</strong>
-          <small>{char.title}</small>
-        </div>
-        <div className="lobby-play">
+      <div className="lobby-play">
+        <div className="lobby-play-row">
           <button type="button" className="lobby-mode" onClick={() => UIManager.go('modes')} data-testid="lobby-mode">
             <span className="lobby-mode-icon" style={{ background: `linear-gradient(160deg, ${mode.colors[0]}, ${mode.colors[1]})` }}>
-              <Icon name={mode.icon} size={26} />
+              <Icon name={mode.icon} size={22} />
             </span>
             <span>
               <small>Modo</small>
               <strong>{mode.name}</strong>
             </span>
-            <span className="lobby-mode-change">trocar</span>
           </button>
-          <Btn variant="green" size="xl" onClick={() => playMode(mode)} testId="btn-play" sfx={null}>
-            JOGAR
-          </Btn>
+          <button
+            type="button"
+            className="pill pill-btn pill-fire lobby-power"
+            title={`Poder equipado: ${progression.equippedPower.name}`}
+            data-testid="chariot-charges"
+            onClick={() => {
+              UIManager.shopTab = 'poderes';
+              UIManager.go('shop');
+            }}
+          >
+            {progression.equippedPower.icon} {progression.chariotCharges}
+          </button>
         </div>
+        <Btn variant="green" size="xl" onClick={() => playMode(mode)} testId="btn-play" sfx={null}>
+          JOGAR
+        </Btn>
       </div>
+
+      <nav className="lobby-nav">
+        <button type="button" className="lobby-nav-item on">
+          <Icon name="home" size={24} tone="rgba(255,255,255,0.25)" />
+          <small>Início</small>
+        </button>
+        <button type="button" className="lobby-nav-item" onClick={() => go('modes')} data-testid="btn-modes">
+          <Icon name="modes" size={24} />
+          <small>Modos</small>
+        </button>
+        <button
+          type="button"
+          className="lobby-nav-item lobby-nav-shop"
+          onClick={() => {
+            UIManager.shopTab = 'destaque';
+            go('shop');
+          }}
+          data-testid="btn-shop"
+        >
+          <Icon name="shop" size={26} />
+          <small>Loja</small>
+        </button>
+        <button type="button" className="lobby-nav-item" onClick={() => go('journey')} data-testid="btn-journey">
+          <Icon name="journey" size={24} />
+          <small>Jornada</small>
+          {unread > 0 && (
+            <span className="badge badge-new" data-testid="journey-unread">
+              {unread}
+            </span>
+          )}
+        </button>
+        <button type="button" className="lobby-nav-item" onClick={() => go('characters')} data-testid="btn-characters">
+          <Icon name="heroes" size={24} />
+          <small>Heróis</small>
+        </button>
+        <button type="button" className={`lobby-nav-item ${more ? 'on' : ''}`} onClick={() => { audio.play('ui'); setMore(!more); }} data-testid="btn-more">
+          <Icon name="plus" size={24} />
+          <small>Mais</small>
+          {claimable > 0 && <span className="badge">{claimable}</span>}
+        </button>
+      </nav>
+
+      {more && (
+        <div className="lobby-more" data-testid="lobby-more">
+          <div className="lobby-more-sheet">
+            {moreItems.map((it) => (
+              <button key={it.id} type="button" className="lobby-more-item" onClick={() => go(it.id)} data-testid={it.testId}>
+                <Icon name={it.icon} size={26} />
+                <small>{it.label}</small>
+                {it.badge ? <span className="badge">{it.badge}</span> : null}
+              </button>
+            ))}
+          </div>
+          <button type="button" className="lobby-more-close" onClick={() => setMore(false)} aria-label="Fechar" />
+        </div>
+      )}
     </div>
   );
 }
 
-/** Jornada do Dia: história → desafio → corrida, com o Baú do Dia e a sequência de dias. */
+/** Jornada do Dia, em uma linha: três passos, o baú e a sequência. O próximo passo pisca. */
 function DailyCard() {
   const d = progression.data.daily;
   const story = progression.dailyStory();
@@ -197,29 +192,25 @@ function DailyCard() {
   const steps = [
     { done: d.story, icon: 'journey' as const, label: 'História', sub: story.title, go: () => UIManager.startStoryRun(story), testId: 'daily-story' },
     { done: d.challenge_done, icon: mode.icon, label: 'Desafio', sub: mode.name, go: () => playMode(mode), testId: 'daily-challenge' },
-    { done: d.run, icon: run.icon, label: 'Corrida', sub: '150 m ou mais', go: () => playMode(run), testId: 'daily-run' },
+    { done: d.run, icon: run.icon, label: 'Corrida', sub: '150 m', go: () => playMode(run), testId: 'daily-run' },
   ];
   const next = steps.find((s) => !s.done);
   return (
-    <div className="daily" data-testid="daily-card">
-      <div className="daily-head">
-        <strong>
-          <Icon name="star" size={16} tone="#ffd23f" stroke="#ffd23f" /> Jornada do Dia
-        </strong>
+    <div className="daily daily-compact" data-testid="daily-card">
+      <div className="daily-row">
+        <span className="daily-title">
+          <Icon name="star" size={14} tone="#ffd23f" stroke="#ffd23f" /> Jornada do Dia
+        </span>
+        <span className="daily-next">{next ? `${next.label}: ${next.sub}` : all && !d.chest ? 'Abra o baú!' : 'Completa ✔'}</span>
         <span className="daily-streak" data-testid="daily-streak">
-          <Icon name="fire" size={16} tone="#ff9a2e" stroke="#ff6a1a" /> {d.streak} {d.streak === 1 ? 'dia' : 'dias'}
+          <Icon name="fire" size={14} tone="#ff9a2e" stroke="#ff6a1a" /> {d.streak}
         </span>
       </div>
       <div className="daily-steps">
         {steps.map((s, i) => (
-          <button key={s.label} type="button" className={`daily-step ${s.done ? 'done' : ''} ${next === s ? 'next' : ''}`} data-testid={s.testId} onClick={() => (s.done ? undefined : s.go())}>
-            <span className="daily-step-icon">{s.done ? <Icon name="check" size={20} stroke="#fff" tone="none" /> : <Icon name={s.icon} size={20} />}</span>
-            <span className="daily-step-text">
-              <small>
-                {i + 1}. {s.label}
-              </small>
-              <strong>{s.sub}</strong>
-            </span>
+          <button key={s.label} type="button" className={`daily-step ${s.done ? 'done' : ''} ${next === s ? 'next' : ''}`} data-testid={s.testId} title={`${s.label}: ${s.sub}`} onClick={() => (s.done ? undefined : s.go())}>
+            <span className="daily-step-icon">{s.done ? <Icon name="check" size={18} stroke="#fff" tone="none" /> : <Icon name={s.icon} size={18} />}</span>
+            <small>{i + 1}</small>
           </button>
         ))}
         <button
@@ -234,8 +225,7 @@ function DailyCard() {
             setReward(r);
           }}
         >
-          <Treasure kind={d.chest ? 'bau' : 'bau'} size={44} />
-          <small>{d.chest ? 'Aberto' : all ? 'Abrir!' : 'Baú'}</small>
+          <Treasure kind="bau" size={34} />
         </button>
       </div>
       {reward && (

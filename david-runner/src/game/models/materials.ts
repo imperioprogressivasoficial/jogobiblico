@@ -24,6 +24,8 @@ const WORLD_Y_VERT = /* glsl */ `
 }`;
 
 interface ShadeOpts {
+  /** 1 = cores originais; menor = menos saturado (tons mais suaves, de desenho impresso). */
+  saturation?: number;
   /** Fator de cor no chão (1 = sem oclusão). */
   aoMin: number;
   /** Altura (m) até onde a oclusão de contato atua. */
@@ -48,7 +50,8 @@ function stylize<T extends THREE.MeshStandardMaterial>(mat: T, key: string, o: S
       .replace(
         '#include <color_fragment>',
         `#include <color_fragment>
-	diffuseColor.rgb *= mix( ${o.aoMin.toFixed(3)}, 1.0, smoothstep( 0.0, ${o.aoHeight.toFixed(3)}, vDrWorldY ) );`,
+	diffuseColor.rgb *= mix( ${o.aoMin.toFixed(3)}, 1.0, smoothstep( 0.0, ${o.aoHeight.toFixed(3)}, vDrWorldY ) );
+	diffuseColor.rgb = mix( vec3( dot( diffuseColor.rgb, vec3( 0.3, 0.59, 0.11 ) ) ), diffuseColor.rgb, ${(o.saturation ?? 1).toFixed(3)} );`,
       );
     if (o.rim > 0) {
       frag = frag.replace(
@@ -145,12 +148,12 @@ export const Materials = {
   prop: stylize(
     new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.86, metalness: 0 }),
     'dr-prop',
-    { aoMin: 0.62, aoHeight: 0.55, rim: 0 },
+    { aoMin: 0.62, aoHeight: 0.55, rim: 0, saturation: 0.88 },
   ),
   character: stylize(
     new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.64, metalness: 0 }),
     'dr-character',
-    { aoMin: 0.82, aoHeight: 0.28, rim: 0.85 },
+    { aoMin: 0.82, aoHeight: 0.28, rim: 0.55, saturation: 0.72 },
   ),
   backdrop: new THREE.MeshBasicMaterial({ vertexColors: true, fog: false }),
   /** Nuvens fofas: iluminação "embrulhada", borda prateada e névoa no horizonte. */

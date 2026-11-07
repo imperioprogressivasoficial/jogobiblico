@@ -25,7 +25,7 @@ function setup(): boolean {
     renderer.setSize(SIZE, SIZE, false);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.AgXToneMapping;
-    renderer.toneMappingExposure = 1.15;
+    renderer.toneMappingExposure = 1.0;
     scene = new THREE.Scene();
     const hemi = new THREE.HemisphereLight(0xfff4e0, 0x8a7a6a, 0.9);
     scene.add(hemi);

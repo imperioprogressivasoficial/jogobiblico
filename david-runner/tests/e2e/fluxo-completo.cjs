@@ -88,6 +88,7 @@ const assert = (c, m) => { if (!c) { console.log('FALHOU: ' + m); process.exitCo
   assert(p.chars.includes('moises') && p.mag === 1 && p.coins === 5000 - 2500 + 300 - 400 && p.sel === 'moises', 'compra de herói e melhoria debitam moedas (+300 da conquista Novo Herói)');
   await page.click('[data-testid=back]');
   // 7) Mapas: desbloquear o Deserto com moedas e selecionar
+  await page.click('[data-testid=btn-more]');
   await page.click('[data-testid=btn-maps]');
   await page.click('[data-testid=unlock-deserto]');
   p = await page.evaluate(() => window.__davidRunner.progression.data.selectedMap);
@@ -95,12 +96,14 @@ const assert = (c, m) => { if (!c) { console.log('FALHOU: ' + m); process.exitCo
   await page.click('[data-testid=back]');
   // 8) Missão: completar e resgatar
   await page.evaluate(() => { const m = window.__davidRunner.progression.data.missions.list; m.forEach((x) => (x.progress = x.target)); window.__davidRunner.progression.updateSettings({}); });
+  await page.click('[data-testid=btn-more]');
   await page.click('[data-testid=btn-missions]');
   for (let i = 0; i < 3; i++) await page.click(`[data-testid=claim-${i}]`);
   p = await page.evaluate(() => ({ mult: window.__davidRunner.progression.baseMultiplier, relics: window.__davidRunner.progression.data.relics }));
   assert(p.mult === 2 && p.relics >= 1, 'concluir as 3 missões aumenta o multiplicador para x2 e dá relíquia');
   await page.click('[data-testid=back]');
   // 9) Configurações persistem após recarregar
+  await page.click('[data-testid=btn-more]');
   await page.click('[data-testid=btn-settings]');
   await page.locator('[data-testid=sensitivity] button', { hasText: 'Alta' }).click();
   await page.reload();
