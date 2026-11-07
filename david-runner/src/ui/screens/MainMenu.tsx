@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { audio } from '../../game/AudioManager';
 import { Confetti } from '../components/Confetti';
+import { NpcBubbles } from '../components/NpcBubbles';
 import { getCharacter } from '../../data/characters';
 import { MODES } from '../../data/modes';
 import { progression } from '../../state/ProgressionManager';
@@ -52,6 +53,7 @@ export function MainMenu() {
   const avatar = getCharacter(profile?.avatar ?? d.selectedCharacter);
   return (
     <div className="screen menu lobby" data-testid="main-menu">
+      <NpcBubbles />
       <header className="lobby-top">
         <button type="button" className="lobby-profile" onClick={() => UIManager.go('parents')} data-testid="lobby-profile">
           <Portrait charId={avatar.id} skinId={d.selectedSkin[avatar.id] ?? 'padrao'} size={44} className="lobby-avatar" />

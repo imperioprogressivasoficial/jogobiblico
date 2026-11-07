@@ -19,6 +19,7 @@ import { Rng } from './rng';
 import { ScoreManager, type RunStats } from './ScoreManager';
 import { TrackGenerator } from './TrackGenerator';
 import { StoryProps } from './StoryProps';
+import { NpcManager } from './Npcs';
 
 export type EngineMode = 'menu' | 'showcase' | 'playing' | 'paused' | 'crashed' | 'over';
 export type Quality = 'alta' | 'media' | 'baixa';
@@ -72,6 +73,8 @@ export class GameEngine {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
   readonly cameraCtl = new CameraController();
+  /** Moradores do lobby (só aparecem no menu). */
+  npcs!: NpcManager;
   readonly env: EnvironmentManager;
   readonly obstacles: ObstacleManager;
   readonly collectibles: CollectibleManager;
@@ -156,6 +159,7 @@ export class GameEngine {
     this.particles = new ParticleSystem(this.scene);
     this.collectibles = new CollectibleManager(this.scene, this.particles);
     this.player = new PlayerController(this.scene, 'davi', 'padrao');
+    this.npcs = new NpcManager(this.scene);
     this.boostFx = new BoostEffect(this.scene);
     this.stone = new THREE.Mesh(new THREE.DodecahedronGeometry(0.16, 0), new THREE.MeshStandardMaterial({ color: 0x9aa3ad, roughness: 0.9 }));
     this.stone.visible = false;
@@ -274,6 +278,8 @@ export class GameEngine {
   // ------------------------------------------------------------- telas
   showMenu(view: 'menu' | 'showcase' = 'menu'): void {
     this.stopChariot();
+    if (view === 'menu') this.npcs.show();
+    else this.npcs.hide();
     this.obstacles.reset();
     this.collectibles.reset();
     this.particles.clear();
@@ -293,6 +299,7 @@ export class GameEngine {
   }
 
   startRun(opts: RunOptions): void {
+    this.npcs.hide();
     this.stopChariot();
     const powerDef = getPower(opts.chariot?.id ?? 'chariot');
     this.chariot.configure(opts.chariot?.charges ?? 0, opts.chariot?.duration ?? CHARIOT.baseDuration, powerDef);
@@ -546,6 +553,7 @@ export class GameEngine {
         }
       }
       anim.update(dt, 0);
+      this.npcs.update(dt, 0);
       this.env.update(0, dt);
       this.particles.update(dt, 0);
     }
