@@ -1720,7 +1720,7 @@
 }
 .npc-bubble {
   position: relative;
-  width: min(56vw, 240px);
+  width: min(52vw, 220px);
   background: #fff;
   border: 3px solid var(--outline);
   border-radius: 16px;

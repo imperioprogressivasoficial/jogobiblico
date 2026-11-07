@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Jogo Bíblico — o app que ensina a Bíblia enquanto a criança joga</title>
+<meta name="description" content="Corrida, quiz e minijogos com as histórias da Bíblia. A criança se diverte, aprende uma história por dia e os pais acompanham tudo e sabem o que perguntar na hora do jantar." />
+<meta name="theme-color" content="#2b1a4a" />
+<meta property="og:title" content="Jogo Bíblico — aprender a Bíblia jogando" />
+<meta property="og:description" content="Uma história bíblica por dia, 5 modos de jogo e um painel para os pais acompanharem. Teste grátis." />
+<meta property="og:image" content="img/lobby.webp" />
+<link rel="icon" href="img/icon-192.png" />
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png" />
+<style>
+@font-face{font-family:'Lilita One';src:url(fonts/lilita.woff2) format('woff2');font-display:swap}
+@font-face{font-family:'Nunito';font-weight:600;src:url(fonts/nunito600.woff2) format('woff2');font-display:swap}
+@font-face{font-family:'Nunito';font-weight:800;src:url(fonts/nunito800.woff2) format('woff2');font-display:swap}
+:root{
+  --ink:#2b1a4a; --purple:#7b5cff; --purple-d:#5a3fd6; --pink:#ff5fa2; --yellow:#ffd23f; --orange:#ff9f1c;
+  --green:#4cbf3f; --green-d:#2d8a24; --cream:#fff8e6; --sky:#8fd8ff;
+  --title:'Lilita One','Arial Rounded MT Bold','Trebuchet MS',system-ui,sans-serif;
+  --body:'Nunito',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:var(--body);font-weight:600;color:var(--ink);background:var(--cream);line-height:1.5;-webkit-text-size-adjust:100%}
+img{max-width:100%;display:block}
+a{color:inherit}
+.wrap{width:min(1080px,100% - 32px);margin-inline:auto}
+h1,h2,h3{font-family:var(--title);font-weight:400;line-height:1.08;margin:0}
+h2{font-size:clamp(28px,6vw,44px)}
+p{margin:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--title);font-size:clamp(18px,4.5vw,22px);padding:14px 26px;border-radius:999px;text-decoration:none;border:3px solid #fff;box-shadow:0 6px 0 rgba(43,26,74,.45);transition:transform .12s;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.25)}
+.btn:active{transform:translateY(3px);box-shadow:0 3px 0 rgba(43,26,74,.45)}
+.btn-play{background:linear-gradient(#78e35d,var(--green-d))}
+.btn-ghost{background:rgba(43,26,74,.55);font-size:clamp(16px,4vw,18px)}
+.btn-pink{background:linear-gradient(var(--pink),#d9367c)}
+.eyebrow{display:inline-block;background:var(--yellow);color:var(--ink);font-family:var(--title);font-size:14px;padding:4px 12px;border-radius:999px;border:2px solid var(--ink)}
+
+/* topo */
+.top{position:sticky;top:0;z-index:20;background:rgba(43,26,74,.92);backdrop-filter:blur(8px);padding:10px 0;padding-top:max(10px,env(safe-area-inset-top))}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-family:var(--title);font-size:22px}
+.brand img{width:36px;height:36px;border-radius:10px}
+.top .btn{padding:8px 18px;font-size:16px;box-shadow:0 4px 0 rgba(0,0,0,.35)}
+
+/* hero */
+.hero{background:linear-gradient(180deg,#7fd3ff 0%,#b69bff 62%,#ff9fc8 100%);color:#fff;padding:36px 0 0;overflow:hidden;position:relative}
+.hero .wrap{display:grid;gap:28px;align-items:center}
+.hero h1{font-size:clamp(36px,9vw,64px);text-shadow:0 4px 0 rgba(43,26,74,.45)}
+.hero h1 em{font-style:normal;color:var(--yellow)}
+.hero p.lead{font-size:clamp(17px,4.2vw,21px);font-weight:800;margin-top:14px;max-width:34em;text-shadow:0 2px 0 rgba(43,26,74,.35)}
+.hero .cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px}
+.hero .note{margin-top:12px;font-size:14px;opacity:.95;font-weight:800}
+.hero-phone{justify-self:center;margin-bottom:-60px}
+.phone{width:min(260px,70vw);border-radius:34px;border:6px solid var(--ink);background:var(--ink);box-shadow:0 14px 0 rgba(43,26,74,.25),0 24px 40px rgba(43,26,74,.35);overflow:hidden}
+.phone img{width:100%;height:auto;aspect-ratio:390/664;object-fit:cover}
+.badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.badges span{background:rgba(43,26,74,.55);border:2px solid rgba(255,255,255,.7);border-radius:999px;padding:4px 12px;font-family:var(--title);font-size:14px}
+
+/* seções */
+section{padding:76px 0 56px}
+.sec-head{text-align:center;max-width:720px;margin:0 auto 36px}
+.sec-head p{margin-top:12px;font-size:clamp(16px,3.8vw,19px)}
+.hero+section{padding-top:110px}
+
+/* dores dos pais */
+.pains{display:grid;gap:14px}
+.pain{background:#fff;border:3px solid var(--ink);border-radius:20px;padding:18px;box-shadow:0 6px 0 var(--ink)}
+.pain h3{font-size:22px;margin-bottom:6px}
+.pain .x{color:#d9473a}
+.pain .ok{color:var(--green-d);font-weight:800;margin-top:8px}
+
+/* jornada */
+.band{background:linear-gradient(180deg,#2b1a4a,#43287a);color:#fff}
+.band .eyebrow{background:var(--pink);color:#fff;border-color:#fff}
+.steps{display:grid;gap:14px;counter-reset:s}
+.step{background:rgba(255,255,255,.1);border:3px solid rgba(255,255,255,.7);border-radius:22px;padding:18px 18px 18px 74px;position:relative}
+.step::before{counter-increment:s;content:counter(s);position:absolute;left:16px;top:16px;width:44px;height:44px;border-radius:50%;background:var(--yellow);color:var(--ink);font-family:var(--title);font-size:26px;display:grid;place-items:center}
+.step h3{font-size:24px;margin-bottom:4px}
+.step.chest::before{content:'★';background:var(--orange)}
+
+/* galeria */
+.shots{display:grid;grid-template-columns:repeat(2,1fr);gap:18px 14px;justify-items:center}
+.shot{text-align:center;max-width:240px}
+.shot .phone{width:100%;border-width:5px;border-radius:28px;box-shadow:0 8px 0 rgba(43,26,74,.2)}
+.shot h3{font-size:19px;margin-top:14px}
+.shot p{font-size:14px;margin-top:4px}
+
+/* recursos */
+.grid{display:grid;gap:14px}
+.card{background:#fff;border:3px solid var(--ink);border-radius:22px;padding:18px;box-shadow:0 6px 0 var(--ink)}
+.card h3{font-size:22px;margin:6px 0 4px}
+.card .ico{width:56px;height:56px;border-radius:16px;background:#f2edff;border:3px solid var(--ink);display:grid;place-items:center}
+.nums{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:30px}
+.num{background:var(--yellow);border:3px solid var(--ink);border-radius:20px;padding:14px;text-align:center;box-shadow:0 5px 0 var(--ink)}
+.num b{display:block;font-family:var(--title);font-weight:400;font-size:clamp(32px,8vw,48px);line-height:1}
+.num span{font-weight:800;font-size:14px}
+
+/* pais */
+.parents{background:linear-gradient(180deg,#e9f9ff,#d9f0ff)}
+.split{display:grid;gap:28px;align-items:center}
+.checks{list-style:none;padding:0;margin:18px 0 0;display:grid;gap:10px}
+.checks li{display:flex;gap:10px;align-items:flex-start;font-weight:800}
+.checks li::before{content:'✔';flex:0 0 auto;width:26px;height:26px;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;font-size:14px;margin-top:1px}
+
+/* plano */
+.plan{max-width:560px;margin:0 auto;background:#fff;border:4px solid var(--ink);border-radius:28px;padding:26px 22px;box-shadow:0 10px 0 var(--ink);text-align:center;position:relative}
+.plan .tag{position:absolute;top:-16px;left:50%;transform:translateX(-50%);white-space:nowrap}
+.plan h3{font-size:30px;margin-top:8px}
+.plan .soon{font-family:var(--title);font-size:26px;color:var(--purple);margin:10px 0}
+.plan .checks{text-align:left;margin:16px 0 22px}
+
+/* faq */
+details{background:#fff;border:3px solid var(--ink);border-radius:18px;padding:14px 18px;margin-bottom:12px;box-shadow:0 4px 0 var(--ink)}
+summary{font-family:var(--title);font-size:20px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:10px}
+summary::after{content:'+';font-size:26px;line-height:1}
+details[open] summary::after{content:'–'}
+details p{margin-top:10px}
+
+/* final */
+.final{background:linear-gradient(180deg,#7fd3ff,#b69bff 60%,#ff9fc8);color:#fff;text-align:center}
+.final h2{text-shadow:0 4px 0 rgba(43,26,74,.45)}
+.final p{margin:12px auto 24px;max-width:32em;font-weight:800;text-shadow:0 2px 0 rgba(43,26,74,.35)}
+footer{background:var(--ink);color:#d9d2ee;padding:28px 0 calc(28px + env(safe-area-inset-bottom));font-size:14px;text-align:center}
+footer a{color:#fff}
+
+@media(min-width:760px){
+  .hero{padding-top:56px}
+  .hero .wrap{grid-template-columns:1.15fr .85fr}
+  .hero-phone{margin-bottom:-90px}
+  .phone{width:300px}
+  .pains{grid-template-columns:repeat(3,1fr)}
+  .steps{grid-template-columns:repeat(2,1fr)}
+  .shots{grid-template-columns:repeat(4,1fr)}
+  .grid{grid-template-columns:repeat(3,1fr)}
+  .nums{grid-template-columns:repeat(5,1fr)}
+  .split{grid-template-columns:1fr 1fr}
+  .hero+section{padding-top:130px}
+}
+@media(prefers-reduced-motion:no-preference){
+  .reveal{opacity:0;transform:translateY(18px);transition:opacity .5s,transform .5s}
+  .reveal.in{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#"><img src="img/icon-192.png" alt="" /> Jogo Bíblico</a>
+    <a class="btn btn-play" href="jogar/">Jogar grátis</a>
+  </div>
+</header>
+
+<main>
+<!-- HERO -->
+<div class="hero">
+  <div class="wrap">
+    <div>
+      <span class="eyebrow">Para crianças de 4 a 12 anos</span>
+      <h1 style="margin-top:14px">Seu filho joga.<br /><em>E aprende a Bíblia.</em></h1>
+      <p class="lead">Corrida, perguntas e minijogos com as histórias da Bíblia. Todo dia uma história nova, e você acompanha o que ele aprendeu.</p>
+      <div class="cta">
+        <a class="btn btn-play" href="jogar/">▶ Jogar a versão de teste</a>
+        <a class="btn btn-ghost" href="#como">Como funciona</a>
+      </div>
+      <p class="note">Sem anúncios. Sem cartão para testar. Funciona no celular.</p>
+      <div class="badges"><span>68 histórias</span><span>5 modos de jogo</span><span>Painel dos pais</span></div>
+    </div>
+    <div class="hero-phone">
+      <div class="phone"><img src="img/lobby.webp" alt="Tela inicial do jogo, com o herói Davi e os moradores de Jerusalém conversando" width="780" height="1328" /></div>
+    </div>
+  </div>
+</div>
+
+<!-- PAIS: DORES -->
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <h2>Tempo de tela que vale a pena</h2>
+      <p>Você quer que seu filho cresça conhecendo a Palavra, mas competir com os jogos do celular não é fácil. A gente juntou os dois.</p>
+    </div>
+    <div class="pains">
+      <div class="pain reveal"><h3><span class="x">✕</span> "Ele só quer jogo"</h3><p>As histórias da Bíblia viram aventura: o herói corre, escuta a narração e o cenário mostra a cena.</p><p class="ok">Ele nem percebe que está aprendendo.</p></div>
+      <div class="pain reveal"><h3><span class="x">✕</span> "Não sei o que ele faz no app"</h3><p>O Painel dos Pais mostra o que foi feito hoje, a lição e o versículo, protegido por PIN.</p><p class="ok">Você sempre sabe o que perguntar.</p></div>
+      <div class="pain reveal"><h3><span class="x">✕</span> "Medo de compras sem querer"</h3><p>Qualquer compra pede o PIN do responsável. As moedas do jogo são ganhas jogando.</p><p class="ok">Você no controle, sem susto.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- COMO FUNCIONA -->
+<section id="como" class="band">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">Jornada do Dia</span>
+      <h2 style="margin-top:12px">10 minutos por dia, na ordem certa</h2>
+      <p>Todo dia o app mostra três passos. Quem completa ganha o Baú do Dia e mantém a sequência de dias, como nos melhores apps de aprender.</p>
+    </div>
+    <div class="steps">
+      <div class="step reveal"><h3>História do dia</h3><p>O herói entra na história: corre pelo cenário, escuta a narração e vê as figuras da cena. No fim, a lição e um quiz.</p></div>
+      <div class="step reveal"><h3>Desafio do dia</h3><p>Um jogo rápido sorteado, com perguntas sobre as histórias: Show da Fé, Monte o Versículo, Memória da Arca ou Funda de Davi.</p></div>
+      <div class="step reveal"><h3>Corrida livre</h3><p>Corra pelas ruas de Jerusalém, o deserto, o vale, o Egito e a Babilônia juntando denários e pergaminhos.</p></div>
+      <div class="step chest reveal"><h3>Baú do Dia</h3><p>Completou os três? Abre o baú com prêmios e a sequência cresce. Voltar amanhã vira hábito.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- TELAS -->
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <h2>Veja o jogo por dentro</h2>
+      <p>Estas são telas reais do app, não montagens.</p>
+    </div>
+    <div class="shots">
+      <figure class="shot reveal" style="margin:0"><div class="phone"><img src="img/historia.webp" alt="Corrida dentro da história da Criação, com narração na tela" /></div><h3>Viver a história</h3><p>Corrida com narração em voz alta.</p></figure>
+      <figure class="shot reveal" style="margin:0"><div class="phone"><img src="img/quiz.webp" alt="Show da Fé: pergunta sobre os magos e a estrela" /></div><h3>Show da Fé</h3><p>Perguntas com tempo e sequência de acertos.</p></figure>
+      <figure class="shot reveal" style="margin:0"><div class="phone"><img src="img/memoria.webp" alt="Memória da Arca: jogo da memória com figuras da Bíblia" /></div><h3>Memória da Arca</h3><p>Cada par revela uma curiosidade bíblica.</p></figure>
+      <figure class="shot reveal" style="margin:0"><div class="phone"><img src="img/modos.webp" alt="Escolha de modos de jogo" /></div><h3>5 modos de jogo</h3><p>Corrida, quiz, memória, versículo e funda.</p></figure>
+    </div>
+  </div>
+</section>
+
+<!-- RECURSOS -->
+<section style="background:#fff0c9">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <h2>Feito para a criança querer voltar</h2>
+    </div>
+    <div class="grid">
+      <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#2b1a4a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM5 20a7 7 0 0 1 14 0z" fill="#ffd23f"/></svg></div><h3>Menino ou menina</h3><p>Ela escolhe o herói ou a heroína: Davi, Moisés, Noé, José, Daniel, Sansão, Ester, Rute e Miriã, cada um com roupas para desbloquear.</p></div>
+      <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#2b1a4a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 13a7 3.2 0 1 0 0-6.4 7 3.2 0 0 0 0 6.4z" fill="#ffd23f"/><path d="M5 10v4c0 1.8 3.1 3.2 7 3.2s7-1.4 7-3.2v-4M5 14v3c0 1.8 3.1 3.2 7 3.2s7-1.4 7-3.2v-3"/></svg></div><h3>Moedas do tempo da Bíblia</h3><p>Ela junta denários (a moeda do tempo de Jesus) e talentos, e aprende a história de cada moeda: lepto, dracma, siclo e mais.</p></div>
+      <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#2b1a4a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21c-4 0-6.5-2.6-6.5-6 0-3.2 2.2-5 3.2-7.5 1 1.2 1.3 2.3 1.3 3.5C11.5 8.5 12 6 14.5 3c.5 3 3.5 5 3.5 9 0 4.4-2.6 9-6 9z" fill="#ffd23f"/></svg></div><h3>Poderes bíblicos</h3><p>Dois toques ativam a Carruagem de Fogo, a Funda, o Cajado, o Manto, a Harpa ou a Força de Sansão.</p></div>
+      <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#2b1a4a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z" fill="#ffd23f"/><path d="M8 9.5h8M8 12.5h5"/></svg></div><h3>Moradores que conversam</h3><p>No lobby, personagens passeiam e falam com ela sobre a história do dia, com voz.</p></div>
+      <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#2b1a4a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9h14l-1 10H6zM9 9V7a3 3 0 0 1 6 0v2" fill="#ffd23f"/></svg></div><h3>Loja do Dia</h3><p>Roupas em destaque mudam todo dia. Tudo com PIN dos pais para comprar.</p></div>
+      <div class="card reveal"><div class="ico"><svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#2b1a4a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4H12v15H6.5A2.5 2.5 0 0 0 4 20.5zM12 4h5.5A2.5 2.5 0 0 1 20 6.5v14A2.5 2.5 0 0 0 17.5 19H12z" fill="#ffd23f"/><path d="M7 8h2.5M14.5 8H17"/></svg></div><h3>Jornada Bíblica</h3><p>68 histórias do Gênesis à Igreja primitiva, em ordem, com lição, versículo e quiz em cada uma.</p></div>
+    </div>
+    <div class="nums">
+      <div class="num reveal"><b>68</b><span>histórias</span></div>
+      <div class="num reveal"><b>9</b><span>heróis e heroínas</span></div>
+      <div class="num reveal"><b>5</b><span>modos de jogo</span></div>
+      <div class="num reveal"><b>5</b><span>mapas bíblicos</span></div>
+      <div class="num reveal"><b>6</b><span>poderes</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- PAIS -->
+<section class="parents">
+  <div class="wrap split">
+    <div class="reveal">
+      <span class="eyebrow">Para os pais</span>
+      <h2 style="margin-top:12px">"O que você aprendeu hoje?"</h2>
+      <p style="margin-top:12px;font-size:18px">O Painel dos Pais, protegido por PIN, entrega a pergunta pronta para a conversa em família.</p>
+      <ul class="checks">
+        <li>O que seu filho fez hoje: história, desafio e corrida</li>
+        <li>Uma pergunta pronta, com a resposta esperada</li>
+        <li>A lição do dia e o versículo para ler juntos</li>
+        <li>Progresso: histórias lidas, quizzes acertados e sequência de dias</li>
+        <li>PIN para compras, sem anúncios no jogo</li>
+      </ul>
+    </div>
+    <div class="reveal" style="justify-self:center"><div class="phone"><img src="img/pais.webp" alt="Painel dos Pais com a pergunta do dia" /></div></div>
+  </div>
+</section>
+
+<!-- PLANO -->
+<section>
+  <div class="wrap">
+    <div class="sec-head reveal"><h2>Plano Família</h2><p>Tudo liberado para a sua família, sem anúncios.</p></div>
+    <div class="plan reveal">
+      <span class="eyebrow tag">Lançamento em breve</span>
+      <h3>Jogo Bíblico Família</h3>
+      <div class="soon">Valor de lançamento em breve</div>
+      <ul class="checks">
+        <li>Todas as histórias, modos e mapas</li>
+        <li>Painel dos Pais com a pergunta do dia</li>
+        <li>Sem anúncios, nunca</li>
+        <li>Compras opcionais sempre com PIN</li>
+      </ul>
+      <a class="btn btn-play" href="jogar/">▶ Jogar a versão de teste</a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section style="padding-top:0">
+  <div class="wrap" style="max-width:760px">
+    <div class="sec-head reveal"><h2>Perguntas dos pais</h2></div>
+    <details class="reveal"><summary>Para qual idade é?</summary><p>Pensado para crianças de 4 a 12 anos. O modo Criança, que é o padrão, deixa a corrida mais calma para os menores.</p></details>
+    <details class="reveal"><summary>Preciso pagar para testar?</summary><p>Não. A versão de teste abre direto no navegador do celular, sem cartão. Nela nenhuma cobrança é feita.</p></details>
+    <details class="reveal"><summary>Como funcionam as compras?</summary><p>As moedas e os talentos são ganhos jogando. Quem quiser pode comprar pacotes, sempre depois de digitar o PIN que o responsável cria no cadastro.</p></details>
+    <details class="reveal"><summary>E os dados do meu filho?</summary><p>No cadastro pedimos apenas o nome (ou apelido), a idade e o e-mail do responsável, que aceita os termos. Nesta versão de teste esses dados ficam guardados só no aparelho.</p></details>
+    <details class="reveal"><summary>As histórias são fiéis à Bíblia?</summary><p>Cada história indica o trecho bíblico de onde vem, com linguagem simples para crianças, lição e versículo. Os pais podem ler junto pelo Painel dos Pais.</p></details>
+    <details class="reveal"><summary>Funciona no iPhone e no Android?</summary><p>Sim, abre no navegador de qualquer celular. O aplicativo nas lojas está a caminho.</p></details>
+  </div>
+</section>
+
+<!-- FINAL -->
+<section class="final">
+  <div class="wrap">
+    <h2 class="reveal">Faça do tempo de tela um tempo de fé</h2>
+    <p class="reveal">Abra no celular do seu filho, crie o perfil em um minuto e veja a primeira história acontecer.</p>
+    <a class="btn btn-play reveal" href="jogar/">▶ Jogar agora, é grátis</a>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Jogo Bíblico · versão de teste · feito com carinho pela Império Progressivas</p>
+    <p style="margin-top:6px">Conteúdo cristão para crianças, com o consentimento e o acompanhamento dos pais.</p>
+  </div>
+</footer>
+
+<script>
+  // revela as seções ao rolar
+  (function(){
+    var els=[].slice.call(document.querySelectorAll('.reveal'));
+    if(!('IntersectionObserver' in window)){els.forEach(function(e){e.classList.add('in')});return;}
+    var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.12});
+    els.forEach(function(e){io.observe(e)});
+  })();
+  // limpa o service worker antigo do jogo, que antes morava neste endereço
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistrations().then(function(rs){
+      rs.forEach(function(r){ if(r.scope.replace(/\/$/,'').endsWith('/david-runner')) r.unregister(); });
+    }).catch(function(){});
+  }
+</script>
+</body>
+</html>

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Publica o DAVID RUNNER na VPS (projeto Docker "david-runner" da Hostinger).
-#   - jogo web/PWA:  https://srv1969277.hstgr.cloud/david-runner/
+#   - página de vendas: https://srv1969277.hstgr.cloud/david-runner/
+#   - jogo web/PWA:     https://srv1969277.hstgr.cloud/david-runner/jogar/
 #   - Expo Go:       exps://srv1969277.hstgr.cloud
 # Uso: DR_UPLOAD_TOKEN=<token do projeto> ./deploy/vps/publicar.sh
 # O token fica na variável UPLOAD_TOKEN do projeto no painel Docker da Hostinger (não versione).
@@ -12,7 +13,11 @@ TMP="$(mktemp -d)"
 
 (cd "$ROOT/david-runner" && npx vite build)
 (cd "$ROOT/david-runner-expo" && npm run sync-game)
-tar czf "$TMP/site.tgz" -C "$ROOT/david-runner/dist" .
+# site = página de vendas na raiz + o jogo em /jogar/
+mkdir -p "$TMP/site/jogar"
+cp -r "$ROOT/landing/." "$TMP/site/"
+cp -r "$ROOT/david-runner/dist/." "$TMP/site/jogar/"
+tar czf "$TMP/site.tgz" -C "$TMP/site" .
 tar czf "$TMP/expo.tgz" -C "$ROOT/david-runner-expo" --exclude=node_modules --exclude=.expo --exclude=dist .
 for k in site expo; do
   curl -fsS -X PUT --data-binary "@$TMP/$k.tgz" -H "x-token: $DR_UPLOAD_TOKEN" "$HOST/david-runner-upload/$k"; echo
