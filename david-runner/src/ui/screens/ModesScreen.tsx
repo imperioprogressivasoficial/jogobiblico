@@ -27,7 +27,7 @@ export function ModesScreen() {
               <button
                 key={m.id}
                 type="button"
-                className={`mode-card ${i === 0 ? 'mode-card-main' : ''} ${UIManager.selectedMode === m.id ? 'selected' : ''}`}
+                className={`mode-card ${i === 0 || m.id === 'mundo' ? 'mode-card-main' : ''} ${UIManager.selectedMode === m.id ? 'selected' : ''}`}
                 style={{ background: `linear-gradient(160deg, ${m.colors[0]}, ${m.colors[1]})` }}
                 data-testid={`mode-${m.id}`}
                 onClick={() => playMode(m)}

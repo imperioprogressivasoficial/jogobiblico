@@ -16,6 +16,7 @@ import { OnboardingScreen } from './ui/screens/OnboardingScreen';
 import { ModesScreen } from './ui/screens/ModesScreen';
 import { CoinsInfoScreen } from './ui/screens/CoinsInfoScreen';
 import { ParentsScreen } from './ui/screens/ParentsScreen';
+import { WorldScreen } from './ui/screens/WorldScreen';
 import { QuizMode } from './ui/screens/modes/QuizMode';
 import { MemoryMode } from './ui/screens/modes/MemoryMode';
 import { VerseMode } from './ui/screens/modes/VerseMode';
@@ -42,6 +43,7 @@ export function App() {
         {screen === 'modes' && <ModesScreen />}
         {screen === 'coins-info' && <CoinsInfoScreen />}
         {screen === 'parents' && <ParentsScreen />}
+        {screen === 'world' && <WorldScreen />}
         {screen === 'mode-quiz' && <QuizMode />}
         {screen === 'mode-memory' && <MemoryMode />}
         {screen === 'mode-verse' && <VerseMode />}

@@ -9,6 +9,7 @@ services:
     volumes:
       - dr-site:/data/site
       - dr-expo:/data/expo
+      - dr-world:/data/world
     command:
       - node
       - -e
@@ -16,7 +17,7 @@ services:
         const http = require('http'), fs = require('fs'), { execFileSync } = require('child_process');
         const T = process.env.UPLOAD_TOKEN;
         http.createServer((q, s) => {
-          const m = q.url.match(/^\/david-runner-upload\/(site|expo)$/);
+          const m = q.url.match(/^\/david-runner-upload\/(site|expo|world)$/);
           if (!m || q.method !== 'PUT' || !T || q.headers['x-token'] !== T) { s.writeHead(403); return s.end('negado'); }
           const tmp = '/tmp/' + m[1] + '.tgz';
           const w = fs.createWriteStream(tmp);
@@ -36,6 +37,30 @@ services:
       - traefik.http.routers.dr-upload.entrypoints=websecure
       - traefik.http.routers.dr-upload.tls.certresolver=letsencrypt
       - traefik.http.services.dr-upload.loadbalancer.server.port=8099
+
+  world:
+    # servidor do Mundo Aberto (beta online): WebSocket, sem banco de dados, sem chat livre.
+    # O código chega pelo uploader (alvo "world"); `node --watch` recarrega sozinho quando ele muda.
+    image: node:22-alpine
+    restart: unless-stopped
+    working_dir: /data/world
+    environment:
+      - PORT=8787
+      - MAX_ROOM=24
+    volumes:
+      - dr-world:/data/world
+    command:
+      - sh
+      - -c
+      - until [ -f server.js ]; do sleep 3; done; [ -d node_modules/ws ] || npm install --omit=dev --no-audit --no-fund; exec node --watch server.js
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.dr-world.rule=Host(`srv1969277.hstgr.cloud`) && PathPrefix(`/david-runner-world`)
+      - traefik.http.routers.dr-world.entrypoints=websecure
+      - traefik.http.routers.dr-world.tls.certresolver=letsencrypt
+      - traefik.http.routers.dr-world.middlewares=dr-world-strip
+      - traefik.http.middlewares.dr-world-strip.stripprefix.prefixes=/david-runner-world
+      - traefik.http.services.dr-world.loadbalancer.server.port=8787
 
   web:
     image: nginx:1.27-alpine
@@ -83,3 +108,4 @@ services:
 volumes:
   dr-site:
   dr-expo:
+  dr-world:

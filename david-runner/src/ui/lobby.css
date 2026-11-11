@@ -2071,3 +2071,180 @@
 .lobby-clean .lobby-more-sheet {
   margin-bottom: calc(16px + var(--safe-bottom));
 }
+
+/* ---------------------------------------------------------------- Mundo Aberto (beta) */
+.world-screen {
+  pointer-events: none;
+  padding: 0;
+}
+.world-look {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  touch-action: none;
+}
+.world-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.world-tag {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.world-tag span {
+  background: rgba(43, 26, 74, 0.8);
+  color: #fff;
+  font-family: var(--font-title);
+  font-size: 13px;
+  padding: 1px 9px;
+  border-radius: 999px;
+  border: 2px solid #fff;
+}
+.world-tag.self span {
+  background: var(--pop-yellow);
+  color: var(--outline);
+  border-color: var(--outline);
+}
+.world-say {
+  max-width: 190px;
+  background: #fff;
+  color: var(--outline);
+  border: 3px solid var(--outline);
+  border-radius: 14px;
+  padding: 5px 10px;
+  font-weight: 800;
+  font-size: 13px;
+  line-height: 1.2;
+  text-align: center;
+  animation: caption-in 0.25s cubic-bezier(0.2, 1.4, 0.5, 1);
+}
+.world-top {
+  position: absolute;
+  top: calc(var(--safe-top) + 10px);
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+}
+.world-top > * {
+  pointer-events: auto;
+}
+.world-back {
+  width: 52px;
+  height: 52px;
+}
+.world-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(43, 26, 74, 0.78);
+  color: #fff;
+  border: 3px solid #fff;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-family: var(--font-title);
+  font-size: 13px;
+}
+.world-status i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ffb02e;
+}
+.world-status.online i {
+  background: var(--pop-green);
+  box-shadow: 0 0 8px var(--pop-green);
+}
+.world-status.offline i {
+  background: #ff6b6b;
+}
+.world-status button {
+  border: 0;
+  background: var(--pop-yellow);
+  color: var(--outline);
+  border-radius: 999px;
+  font-family: var(--font-title);
+  font-size: 12px;
+  padding: 2px 8px;
+}
+.world-beta {
+  margin-left: auto;
+  background: var(--pop-pink);
+  color: #fff;
+  border: 2px solid #fff;
+  border-radius: 8px;
+  font-family: var(--font-title);
+  font-size: 12px;
+  padding: 2px 8px;
+}
+.world-stick {
+  position: absolute;
+  left: 22px;
+  bottom: calc(var(--safe-bottom) + 28px);
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  background: rgba(43, 26, 74, 0.45);
+  border: 3px solid rgba(255, 255, 255, 0.8);
+  pointer-events: auto;
+  touch-action: none;
+  display: grid;
+  place-items: center;
+}
+.world-stick-knob {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: linear-gradient(#fff, #d9d2ee);
+  border: 3px solid var(--outline);
+  box-shadow: 0 4px 0 rgba(43, 26, 74, 0.5);
+}
+.world-actions {
+  position: absolute;
+  right: 18px;
+  bottom: calc(var(--safe-bottom) + 34px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: auto;
+}
+.world-say-btn {
+  background: linear-gradient(#5fe36f, var(--green-dark));
+}
+.world-panel {
+  position: absolute;
+  right: 14px;
+  bottom: calc(var(--safe-bottom) + 34px);
+  width: min(58vw, 240px);
+  margin-right: 74px;
+  background: #fff;
+  border: 3px solid var(--outline);
+  border-radius: 18px;
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+  box-shadow: 0 5px 0 var(--outline);
+  pointer-events: auto;
+  animation: caption-in 0.25s cubic-bezier(0.2, 1.4, 0.5, 1);
+}
+.world-panel button {
+  border: 2px solid var(--outline);
+  background: #f2edff;
+  color: var(--outline);
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-family: var(--font-title);
+  font-size: 14px;
+  text-align: left;
+}
+.world-panel-emotes {
+  grid-template-columns: 1fr 1fr;
+}

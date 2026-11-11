@@ -24,7 +24,8 @@ export type Screen =
   | 'mode-verse'
   | 'mode-sling'
   | 'coins-info'
-  | 'parents';
+  | 'parents'
+  | 'world';
 
 export type ShopTab = 'destaque' | 'moedas' | 'herois' | 'trajes' | 'melhorias' | 'poderes';
 

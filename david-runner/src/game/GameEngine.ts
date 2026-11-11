@@ -20,8 +20,9 @@ import { ScoreManager, type RunStats } from './ScoreManager';
 import { TrackGenerator } from './TrackGenerator';
 import { StoryProps } from './StoryProps';
 import { NpcManager } from './Npcs';
+import { World } from './World';
 
-export type EngineMode = 'menu' | 'showcase' | 'playing' | 'paused' | 'crashed' | 'over';
+export type EngineMode = 'menu' | 'showcase' | 'playing' | 'paused' | 'crashed' | 'over' | 'world';
 export type Quality = 'alta' | 'media' | 'baixa';
 export type PowerType = 'magnet' | 'double' | 'shield';
 
@@ -75,6 +76,8 @@ export class GameEngine {
   readonly cameraCtl = new CameraController();
   /** Moradores do lobby (só aparecem no menu). */
   npcs!: NpcManager;
+  /** Mundo Aberto (beta): praça para explorar a pé. */
+  world!: World;
   readonly env: EnvironmentManager;
   readonly obstacles: ObstacleManager;
   readonly collectibles: CollectibleManager;
@@ -160,6 +163,7 @@ export class GameEngine {
     this.collectibles = new CollectibleManager(this.scene, this.particles);
     this.player = new PlayerController(this.scene, 'davi', 'padrao');
     this.npcs = new NpcManager(this.scene);
+    this.world = new World(this.scene);
     this.boostFx = new BoostEffect(this.scene);
     this.stone = new THREE.Mesh(new THREE.DodecahedronGeometry(0.16, 0), new THREE.MeshStandardMaterial({ color: 0x9aa3ad, roughness: 0.9 }));
     this.stone.visible = false;
@@ -276,7 +280,27 @@ export class GameEngine {
   };
 
   // ------------------------------------------------------------- telas
+  /** Entra no Mundo Aberto: esconde a pista e mostra a praça. */
+  enterWorld(charId: string, skinId: string): void {
+    this.stopChariot();
+    this.obstacles.reset();
+    this.collectibles.reset();
+    this.particles.clear();
+    this.storyProps.clear();
+    this.generator = null;
+    this.npcs.hide();
+    this.setMap('jerusalem');
+    this.player.root.visible = false;
+    this.env.root.visible = false;
+    this.world.enter(charId, skinId, this.map!.theme);
+    this.setMode('world');
+    audio.playMusic('menu');
+  }
+
   showMenu(view: 'menu' | 'showcase' = 'menu'): void {
+    this.world.leave();
+    this.player.root.visible = true;
+    this.env.root.visible = true;
     this.stopChariot();
     if (view === 'menu') this.npcs.show();
     else this.npcs.hide();
@@ -300,6 +324,9 @@ export class GameEngine {
 
   startRun(opts: RunOptions): void {
     this.npcs.hide();
+    this.world.leave();
+    this.player.root.visible = true;
+    this.env.root.visible = true;
     this.stopChariot();
     const powerDef = getPower(opts.chariot?.id ?? 'chariot');
     this.chariot.configure(opts.chariot?.charges ?? 0, opts.chariot?.duration ?? CHARIOT.baseDuration, powerDef);
@@ -557,10 +584,15 @@ export class GameEngine {
       this.env.update(0, dt);
       this.particles.update(dt, 0);
     }
-    const camSpeed = this.mode === 'playing' || this.mode === 'crashed' ? this.speed : 0;
-    this.storyProps.update(this.distance, dt);
-    this.cameraCtl.update(dt, this.player.x, this.player.y, camSpeed);
-    this.boostFx.applyCamera(this.cameraCtl.camera, dt);
+    if (this.mode === 'world') {
+      this.world.update(dt, this.cameraCtl.camera);
+      this.env.update(0, dt);
+    } else {
+      const camSpeed = this.mode === 'playing' || this.mode === 'crashed' ? this.speed : 0;
+      this.storyProps.update(this.distance, dt);
+      this.cameraCtl.update(dt, this.player.x, this.player.y, camSpeed);
+      this.boostFx.applyCamera(this.cameraCtl.camera, dt);
+    }
     this.env.atmosphere.setHeroFill(this.mode === 'menu' || this.mode === 'showcase' ? 1 : 0, dt);
     this.renderer.info.reset();
     this.post.render(dt);
