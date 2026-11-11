@@ -31,7 +31,8 @@ export function cleanName(raw) {
   let s = String(raw ?? '').normalize('NFKD').replace(/[^A-Za-zÀ-ÿ]/g, '').slice(0, 12);
   if (s.length < 2) return 'Amigo';
   const low = s.toLowerCase();
-  if (BAD.some((b) => low.includes(b))) return 'Amigo';
+  // palavras curtas ("cu", "fdp", "sex") só valem no começo do nome: "Marcus" e "Lucas" são nomes comuns
+  if (BAD.some((b) => (b.length <= 3 ? low.startsWith(b) : low.includes(b)))) return 'Amigo';
   return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 }
 
@@ -82,7 +83,7 @@ export function createWorld({ port = PORT, host = '0.0.0.0' } = {}) {
       if (!p.room) return;
       if (m.t === 'pos') {
         const now = Date.now();
-        const dt = Math.max(0.03, (now - p.lastPos) / 1000);
+        const dt = Math.min(0.5, Math.max(0.03, (now - p.lastPos) / 1000)); // teto: quem fica parado não "junta" distância para teletransportar
         p.lastPos = now;
         let x = Number(m.x), z = Number(m.z);
         if (!Number.isFinite(x) || !Number.isFinite(z)) return;
