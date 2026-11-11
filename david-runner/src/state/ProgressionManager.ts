@@ -204,7 +204,32 @@ function merge(base: SaveData, loaded: Partial<SaveData>): SaveData {
   if (!out.unlockedPowers.includes(out.equippedPower)) out.equippedPower = 'chariot';
   out.chariot = { ...out.powers.chariot };
   migrateStories(out);
+  sanitize(out);
   return out;
+}
+
+const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.floor(v)) : 0);
+
+/** Corrige saves corrompidos/antigos: moedas negativas, listas ausentes, ids que não existem mais. */
+function sanitize(d: SaveData): void {
+  d.coins = num(d.coins);
+  d.relics = num(d.relics);
+  for (const k of Object.keys(d.stats) as (keyof SaveData['stats'])[]) d.stats[k] = num(d.stats[k]);
+  const strs = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
+  d.purchases = strs(d.purchases);
+  d.characters = strs(d.characters).filter((id) => CHARACTERS.some((c) => c.id === id));
+  if (!d.characters.includes('davi')) d.characters.unshift('davi');
+  if (!d.characters.includes(d.selectedCharacter)) d.selectedCharacter = d.characters[0];
+  d.maps = strs(d.maps).filter((id) => MAPS.some((m) => m.id === id));
+  if (!d.maps.includes('jerusalem')) d.maps.unshift('jerusalem');
+  if (!d.maps.includes(d.selectedMap)) d.selectedMap = d.maps[0];
+  if (!d.modeBest || typeof d.modeBest !== 'object') d.modeBest = {};
+  if (!d.bestByMap || typeof d.bestByMap !== 'object') d.bestByMap = {};
+  if (!Array.isArray(d.records)) d.records = [];
+  if (!d.achievements || typeof d.achievements !== 'object') d.achievements = {};
+  const m = d.missions;
+  m.list = Array.isArray(m.list) ? m.list.filter((x) => x && MISSION_POOL.some((t) => t.id === x.templateId)) : [];
+  m.multiplierLevel = Math.min(MAX_MULTIPLIER - 1, num(m.multiplierLevel));
 }
 
 const STORY_IDS = new Set(STORY.map((s) => s.id));
@@ -279,8 +304,12 @@ export class ProgressionManager {
 
   resetProgress(): void {
     const settings = this.data.settings;
+    const { profile, purchases } = this.data;
     this.data = defaults();
     this.data.settings = settings;
+    // a conta do responsável e as compras de pacote único não se apagam (evita ganhar o presente de novo)
+    this.data.profile = profile;
+    this.data.purchases = purchases;
     this.ensureDailyMissions();
     this.commit();
   }
@@ -338,6 +367,7 @@ export class ProgressionManager {
     const dl = this.data.daily;
     if (dl[step]) return;
     dl[step] = true;
+    this.commit();
     if (dl.story && dl.challenge_done && dl.run && dl.lastDone !== dl.day) {
       dl.streak = dl.lastDone === yesterday() ? dl.streak + 1 : 1;
       dl.lastDone = dl.day;
@@ -347,6 +377,7 @@ export class ProgressionManager {
 
   /** Abre o Baú do Dia. Devolve { coins, talents } ou null. */
   openChest(): { coins: number; talents: number } | null {
+    this.ensureDaily();
     const dl = this.data.daily;
     if (dl.chest || !(dl.story && dl.challenge_done && dl.run)) return null;
     dl.chest = true;
@@ -791,6 +822,7 @@ export class ProgressionManager {
   /** Credita um pacote de denários/talentos (a cobrança é feita pela loja do aparelho). */
   grantPack(id: string, coins: number, relics: number, once = false): boolean {
     if (once && this.data.purchases.includes(id)) return false;
+    if (!Number.isFinite(coins) || !Number.isFinite(relics) || coins < 0 || relics < 0) return false;
     this.data.coins += coins;
     this.data.relics += relics;
     if (!this.data.purchases.includes(id)) this.data.purchases.push(id);
@@ -801,6 +833,10 @@ export class ProgressionManager {
   /** Compra uma roupa em destaque com desconto, pagando em talentos. */
   buySkinFor(characterId: string, skinId: string, price: number): boolean {
     const own = this.data.skins[characterId] ?? [];
+    const c = getCharacter(characterId);
+    if (c.id !== characterId || !c.skins.some((x) => x.id === skinId)) return false;
+    if (!this.data.characters.includes(characterId)) return false;
+    if (!Number.isFinite(price) || price < 0) return false;
     if (own.includes(skinId) || this.data.relics < price) return false;
     this.data.relics -= price;
     this.data.skins[characterId] = [...own, skinId];
@@ -809,7 +845,7 @@ export class ProgressionManager {
   }
 
   spendCoins(n: number): boolean {
-    if (this.data.coins < n) return false;
+    if (!Number.isFinite(n) || n < 0 || this.data.coins < n) return false;
     this.data.coins -= n;
     this.commit();
     return true;
