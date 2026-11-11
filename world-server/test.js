@@ -37,6 +37,15 @@ assert.ok(Math.hypot(pa[1], pa[2]) < 12, 'posição limitada: ' + JSON.stringify
 a.close(); await wait(150);
 assert.ok(b.msgs.some((m) => m.t === 'leave'));
 
+// mensagens malformadas ("null", número, lista, r infinito) não derrubam o servidor
+const bad = await open();
+for (const raw of ['null', '5', '[]', '"oi"', '{']) bad.send(raw);
+bad.send(JSON.stringify({ t: 'join', name: 'Bia', hero: 'ester', skin: 'padrao' })); await wait(100);
+bad.send('{"t":"pos","x":1,"z":7,"r":1e999,"a":1}'); await wait(250);
+assert.equal(bad.msgs[0].t, 'welcome', 'servidor continua vivo após lixo');
+assert.ok(b.msgs.filter((m) => m.t === 'snap').pop().p.every((p) => p.every((v) => v !== null)), 'snapshot sem null');
+bad.close();
+
 // sala cheia abre outra sala
 const many = []; for (let i = 0; i < 26; i++) { const s = await open(); s.send(JSON.stringify({ t: 'join', name: 'P' + i + 'x' })); many.push(s); }
 await wait(300);

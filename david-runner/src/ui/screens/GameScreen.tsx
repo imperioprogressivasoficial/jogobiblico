@@ -46,6 +46,8 @@ export function GameScreen() {
   const [reviveLeft, setReviveLeft] = useState(0);
   const revivesUsed = useRef(0);
   const pendingStats = useRef<RunStats | null>(null);
+  /** A corrida atual já foi contabilizada (evita contar duas vezes num toque duplo ou no fim da contagem). */
+  const settled = useRef(false);
   const distRef = useRef<HTMLSpanElement>(null);
   const scoreRef = useRef<HTMLSpanElement>(null);
   const coinsRef = useRef<HTMLSpanElement>(null);
@@ -87,6 +89,7 @@ export function GameScreen() {
   useEffect(() => {
     const offs = [
       engine.on('gameover', (stats) => {
+        settled.current = false;
         pendingStats.current = stats;
         const cost = REVIVE_COST[revivesUsed.current];
         if (cost !== undefined && progression.data.coins + stats.coins >= cost) {
@@ -197,6 +200,8 @@ export function GameScreen() {
   });
 
   function finalize(stats: RunStats) {
+    if (settled.current) return;
+    settled.current = true;
     const s = progression.applyRun(stats);
     progression.setTutorialDone();
     setSummary(s);
@@ -206,6 +211,7 @@ export function GameScreen() {
   }
 
   function revive() {
+    if (settled.current || (engine.mode !== 'over' && engine.mode !== 'crashed')) return;
     const cost = REVIVE_COST[revivesUsed.current];
     const stats = pendingStats.current!;
     // as denários da corrida atual também podem pagar o resgate
@@ -235,6 +241,7 @@ export function GameScreen() {
 
   function restart() {
     revivesUsed.current = 0;
+    settled.current = false;
     toastedMissions.current.clear();
     pendingStats.current = null;
     setRunId((r) => r + 1);

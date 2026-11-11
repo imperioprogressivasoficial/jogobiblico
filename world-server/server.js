@@ -62,6 +62,8 @@ export function createWorld({ port = PORT, host = '0.0.0.0' } = {}) {
       } catch {
         return;
       }
+      // "null", números e listas são JSON válidos, mas não são mensagens: ignora (antes derrubava o servidor)
+      if (!m || typeof m !== 'object' || Array.isArray(m)) return;
       p.msgs++;
       if (p.msgs > 40) return; // limite por segundo (zera a cada 1 s)
       if (m.t === 'join' && !p.room) {
@@ -90,7 +92,8 @@ export function createWorld({ port = PORT, host = '0.0.0.0' } = {}) {
         const rr = Math.hypot(x, z);
         if (rr > WORLD_RADIUS) { x = (x / rr) * WORLD_RADIUS; z = (z / rr) * WORLD_RADIUS; }
         p.x = x; p.z = z;
-        p.r = Number(m.r) || 0;
+        const r = Number(m.r);
+        p.r = Number.isFinite(r) ? Math.max(-100, Math.min(100, r)) : 0;
         p.a = [0, 1, 2, 3, 4].includes(m.a) ? m.a : 0; // 0 parado, 1 andando, 2 correndo, 3 gesto, 4 pulo
       } else if (m.t === 'say') {
         const i = Number(m.id);

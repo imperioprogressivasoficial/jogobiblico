@@ -50,6 +50,17 @@ export class WorldClient {
 
   connect(): void {
     this.closed = false;
+    if (this.ws) {
+      // reconexão: solta a conexão anterior sem avisar "offline"
+      const old = this.ws;
+      this.ws = null;
+      old.onclose = old.onmessage = old.onerror = null;
+      try {
+        old.close();
+      } catch {
+        /* já fechada */
+      }
+    }
     this.h.status('connecting');
     let timeout = 0;
     try {
@@ -61,26 +72,28 @@ export class WorldClient {
         ws.send(JSON.stringify({ t: 'join', ...this.join }));
       };
       ws.onmessage = (e) => {
+        if (this.closed) return;
         let m: { t: string; [k: string]: unknown };
         try {
           m = JSON.parse(String(e.data));
         } catch {
           return;
         }
+        if (!m || typeof m !== 'object') return;
         switch (m.t) {
           case 'welcome':
             this.id = m.id as number;
             this.h.status('online', m.room as number);
-            this.h.welcome(this.id, m.players as NetPlayer[]);
+            this.h.welcome(this.id, Array.isArray(m.players) ? (m.players as NetPlayer[]) : []);
             break;
           case 'join':
-            this.h.join(m.p as NetPlayer);
+            if (m.p && typeof m.p === 'object') this.h.join(m.p as NetPlayer);
             break;
           case 'leave':
             this.h.leave(m.id as number);
             break;
           case 'snap':
-            this.h.snap(m.p as [number, number, number, number, NetAnim][]);
+            if (Array.isArray(m.p)) this.h.snap(m.p as [number, number, number, number, NetAnim][]);
             break;
           case 'say':
             this.h.say(m.id as number, m.i as number);

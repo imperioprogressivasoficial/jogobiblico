@@ -4,6 +4,7 @@
  */
 
 let current: SpeechSynthesisUtterance | null = null;
+let currentEnd: (() => void) | undefined;
 let chosen: SpeechSynthesisVoice | null | undefined;
 
 export function speechSupported(): boolean {
@@ -45,6 +46,13 @@ if (speechSupported()) {
   window.speechSynthesis.addEventListener?.('voiceschanged', () => {
     chosen = undefined;
   });
+  // app em segundo plano: a voz não pode continuar falando (nem deixar a música abafada)
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden || !current) return;
+    const end = currentEnd;
+    stopSpeaking();
+    end?.();
+  });
 }
 
 /** Ajusta o texto para soar natural: referências bíblicas, travessões, aspas. */
@@ -77,12 +85,18 @@ export function speak(text: string, onEnd?: () => void): boolean {
     u.lang = v.lang;
   }
   const done = () => {
-    if (current === u) current = null;
+    if (current === u) {
+      current = null;
+      currentEnd = undefined;
+    }
     onEnd?.();
   };
+  // iOS/Chrome: uma fala pausada "trava" a fila; retoma antes de falar
+  if (synth.paused) synth.resume();
   u.onend = done;
   u.onerror = done;
-  current = u; // mantém a referência (no Chrome, sem isso o evento de fim pode se perder)
+  current = u;
+  currentEnd = onEnd; // mantém a referência (no Chrome, sem isso o evento de fim pode se perder)
   synth.speak(u);
   return true;
 }
@@ -91,6 +105,7 @@ export function stopSpeaking(): void {
   if (!speechSupported()) return;
   const u = current;
   current = null;
+  currentEnd = undefined;
   if (u) {
     u.onend = null;
     u.onerror = null;
