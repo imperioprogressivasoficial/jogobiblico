@@ -119,13 +119,18 @@ export class World {
 
   // ------------------------------------------------------------------ jogadores remotos
   addRemote(id: number, name: string, charId: string, skinId: string, x: number, z: number, r: number): void {
-    if (this.others.has(id)) return;
+    if (this.others.has(id) || !Number.isFinite(x) || !Number.isFinite(z)) return;
     const av = this.makeAvatar(id, name, charId, skinId);
     av.x = av.tx = x;
     av.z = av.tz = z;
-    av.r = av.tr = r;
+    av.r = av.tr = Number.isFinite(r) ? r : 0;
     this.group.add(av.rig.root, av.shadow);
     this.others.set(id, av);
+  }
+
+  /** Remove todos os jogadores remotos (ao reconectar, a lista vem de novo no "welcome"). */
+  clearRemotes(): void {
+    this.clearOthers();
   }
 
   removeRemote(id: number): void {
@@ -137,10 +142,10 @@ export class World {
 
   updateRemote(id: number, x: number, z: number, r: number, a: NetAnim): void {
     const av = this.others.get(id);
-    if (!av) return;
+    if (!av || !Number.isFinite(x) || !Number.isFinite(z)) return;
     av.tx = x;
     av.tz = z;
-    av.tr = r;
+    av.tr = Number.isFinite(r) ? r : av.tr;
     av.a = a;
   }
 

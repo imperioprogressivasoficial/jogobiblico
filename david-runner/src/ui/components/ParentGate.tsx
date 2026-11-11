@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { audio } from '../../game/AudioManager';
 import { progression } from '../../state/ProgressionManager';
 import { Btn } from './common';
@@ -11,6 +11,11 @@ export function ParentGate({ title, detail, onOk, onCancel }: { title: string; d
   const hasPin = !!progression.data.profile?.pin;
   const [pin, setPin] = useState('');
   const [err, setErr] = useState(false);
+  /** Impede confirmar duas vezes (toque duplo no último dígito creditaria a compra em dobro). */
+  const fired = useRef(false);
+  /** Tentativas erradas seguidas: depois de 5, espera 30 s (a criança não adivinha o PIN). */
+  const fails = useRef(0);
+  const lockedUntil = useRef(0);
   const [q] = useState(() => {
     const a = 6 + Math.floor(Math.random() * 7);
     const b = 3 + Math.floor(Math.random() * 7);
@@ -18,6 +23,7 @@ export function ParentGate({ title, detail, onOk, onCancel }: { title: string; d
   });
 
   const press = (k: string) => {
+    if (fired.current || Date.now() < lockedUntil.current) return;
     audio.play('ui');
     setErr(false);
     if (k === '⌫') return setPin((p) => p.slice(0, -1));
@@ -26,8 +32,14 @@ export function ParentGate({ title, detail, onOk, onCancel }: { title: string; d
     const done = hasPin ? next.length === 4 : next.length >= String(q.a * q.b).length;
     if (!done) return;
     const ok = hasPin ? progression.checkPin(next) : Number(next) === q.a * q.b;
-    if (ok) onOk();
-    else {
+    if (ok) {
+      fired.current = true;
+      onOk();
+    } else {
+      if (++fails.current >= 5) {
+        fails.current = 0;
+        lockedUntil.current = Date.now() + 30000;
+      }
       audio.play('error');
       setErr(true);
       setPin('');

@@ -55,6 +55,7 @@ export function WorldScreen() {
           },
           welcome: (id, players) => {
             myId.current = id;
+            w.clearRemotes(); // reconexão: a lista nova substitui a antiga
             players.forEach((p: NetPlayer) => {
               w.addRemote(p.id, p.name, p.hero, p.skin, p.x, p.z, p.r);
               names.current[p.id] = p.name;
@@ -205,7 +206,7 @@ export function WorldScreen() {
           <i />
           {status === 'online' ? `Online · Sala ${room} · ${count} ${count === 1 ? 'jogador' : 'jogadores'}` : status === 'connecting' ? 'Conectando...' : 'Sem conexão · modo solo'}
           {status === 'offline' && (
-            <button type="button" onClick={() => location.reload()}>
+            <button type="button" onClick={() => net.current?.connect()}>
               Tentar de novo
             </button>
           )}

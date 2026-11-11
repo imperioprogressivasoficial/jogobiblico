@@ -43,6 +43,8 @@ export function StoryRunOverlay({
   const [hidden, setHidden] = useState(false);
   const elapsed = useRef(0);
   const spoken = useRef(false);
+  const answered = useRef(false);
+  const timers = useRef<number[]>([]);
   const emojis = splitEmojis(story.scene);
 
   const textOf = (c: Card): string => {
@@ -120,29 +122,37 @@ export function StoryRunOverlay({
       stopSpeaking();
       audio.setDucked(false);
       holdRef.current = false;
+      // sair da corrida antes dos temporizadores do quiz não pode religar a contagem no menu
+      timers.current.forEach((t) => window.clearTimeout(t));
+      timers.current = [];
     },
     [holdRef],
   );
 
   function answer(i: number) {
-    if (card.kind !== 'quiz') return;
+    if (card.kind !== 'quiz' || answered.current) return;
     if (i !== story.quiz.answer) {
       setWrong((w) => (w.includes(i) ? w : [...w, i]));
       audio.play('oops');
+      audio.setDucked(false); // a fala do quiz foi interrompida: devolve a música
       speak('Quase! Tente de novo.');
       return;
     }
+    answered.current = true;
     stopSpeaking();
+    audio.setDucked(false);
     const reward = progression.completeStoryQuiz(story.id);
     progression.markStoryRead(story.id);
     audio.play('victory');
     setCard({ kind: 'done', reward });
     speak(reward > 0 ? `Muito bem! Você ganhou ${reward} denários. Continue correndo!` : 'Muito bem! Continue correndo!');
-    window.setTimeout(() => {
-      holdRef.current = false;
-      onResume();
-    }, 1800);
-    window.setTimeout(() => setHidden(true), 7000);
+    timers.current.push(
+      window.setTimeout(() => {
+        holdRef.current = false;
+        onResume();
+      }, 1800),
+      window.setTimeout(() => setHidden(true), 7000),
+    );
   }
 
   if (card.kind === 'quiz') {

@@ -188,7 +188,7 @@ export class GameEngine {
       }
     };
     this.input = new InputManager(inputTarget, (a) => this.handleAction(a));
-    for (const ev of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown'] as const) window.addEventListener(ev, () => audio.unlock(), { passive: true, capture: true });
+    for (const ev of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown'] as const) window.addEventListener(ev, this.unlockAudio, { passive: true, capture: true });
     this.input.enabled = false;
 
     this.setMap('jerusalem');
@@ -273,6 +273,8 @@ export class GameEngine {
     this.cameraCtl.resize(w, h);
     this.post?.setSize(w, h);
   };
+
+  private unlockAudio = () => audio.unlock();
 
   private onVisibility = () => {
     if (document.hidden && this.mode === 'playing') this.pause();
@@ -846,6 +848,7 @@ export class GameEngine {
     this.resizeObs.disconnect();
     this.input.dispose();
     document.removeEventListener('visibilitychange', this.onVisibility);
+    for (const ev of ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown'] as const) window.removeEventListener(ev, this.unlockAudio, { capture: true });
     this.post.dispose();
     this.renderer.dispose();
   }
