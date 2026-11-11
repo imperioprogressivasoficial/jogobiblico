@@ -2248,3 +2248,8 @@
 .world-panel-emotes {
   grid-template-columns: 1fr 1fr;
 }
+button.webgl-error {
+  border: 0;
+  pointer-events: auto;
+  cursor: pointer;
+}

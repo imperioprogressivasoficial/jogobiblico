@@ -15,6 +15,21 @@ let scene: THREE.Scene | null = null;
 let camera: THREE.PerspectiveCamera | null = null;
 const SIZE = 256;
 
+let idleTimer = 0;
+/** Libera o contexto WebGL dos retratos pouco depois do uso: no iPhone, dois contextos ao mesmo tempo
+ *  podem fazer o sistema derrubar o principal (tela 3D cinza). O cache de imagens continua valendo. */
+function scheduleRelease(): void {
+  window.clearTimeout(idleTimer);
+  idleTimer = window.setTimeout(() => {
+    if (!renderer) return;
+    renderer.dispose();
+    renderer.forceContextLoss();
+    renderer = null;
+    scene = null;
+    camera = null;
+  }, 1200);
+}
+
 function setup(): boolean {
   if (renderer) return true;
   try {
@@ -99,5 +114,6 @@ function render(charId: string, skinId: string): string | null {
   }
   scene.remove(rig.root);
   rig.dispose();
+  scheduleRelease();
   return url;
 }
