@@ -16,6 +16,8 @@ TMP="$(mktemp -d)"
 # site = página de vendas na raiz + o jogo em /jogar/
 mkdir -p "$TMP/site/jogar"
 cp -r "$ROOT/landing/." "$TMP/site/"
+# ferramentas e documentação da página não vão para o site público
+rm -rf "$TMP/site/tools" "$TMP/site/DESIGN.md"
 cp -r "$ROOT/david-runner/dist/." "$TMP/site/jogar/"
 tar czf "$TMP/site.tgz" -C "$TMP/site" .
 tar czf "$TMP/expo.tgz" -C "$ROOT/david-runner-expo" --exclude=node_modules --exclude=.expo --exclude=dist .
