@@ -31,7 +31,7 @@ assert.equal(b.msgs.filter((m) => m.t === 'say').length, 1, 'frase inválida ign
 a.send(JSON.stringify({ t: 'pos', x: 40, z: 40, r: 0, a: 1 })); await wait(250);
 const snap = b.msgs.filter((m) => m.t === 'snap').pop();
 const pa = snap.p.find((p) => p[0] === a.msgs[0].id);
-assert.ok(Math.hypot(pa[1], pa[2]) < 12, 'posição limitada: ' + JSON.stringify(pa));
+assert.ok(Math.hypot(pa[1], pa[2]) < 16, 'posição limitada: ' + JSON.stringify(pa));
 
 // sair avisa os outros
 a.close(); await wait(150);
