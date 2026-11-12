@@ -5,7 +5,9 @@
 //  - Nome exibido: só o primeiro nome, letras, até 12 caracteres, passado por filtro.
 //  - Nada é gravado em disco; ao sair, a pessoa some. Não há IP, e-mail ou idade no servidor.
 //  - Salas de até MAX_ROOM jogadores; limite de mensagens por segundo; posição validada.
+import http from 'node:http';
 import { WebSocketServer } from 'ws';
+import { handleAccess } from './access.js';
 
 export const PORT = Number(process.env.PORT || 8787);
 export const MAX_ROOM = Number(process.env.MAX_ROOM || 24);
@@ -36,8 +38,15 @@ export function cleanName(raw) {
   return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 }
 
-export function createWorld({ port = PORT, host = '0.0.0.0' } = {}) {
-  const wss = new WebSocketServer({ port, host, maxPayload: 512 });
+export function createWorld({ port = PORT, host = '0.0.0.0', accessFile } = {}) {
+  // um só servidor HTTP: rotas /access/* (códigos de acesso) e o WebSocket do mundo
+  const server = http.createServer((req, res) => {
+    if (handleAccess(req, res, accessFile)) return;
+    res.writeHead(200, { 'content-type': 'text/plain' });
+    res.end('Mundo Aberto');
+  });
+  server.listen(port, host);
+  const wss = new WebSocketServer({ server, maxPayload: 512 });
   const rooms = []; // cada sala: Map(id -> player)
   let nextId = 1;
 
@@ -141,7 +150,7 @@ export function createWorld({ port = PORT, host = '0.0.0.0' } = {}) {
   return {
     wss,
     rooms,
-    close: () => new Promise((res) => { clearInterval(tick); clearInterval(reset); clearInterval(ping); wss.clients.forEach((c) => c.terminate()); wss.close(res); }),
+    close: () => new Promise((res) => { clearInterval(tick); clearInterval(reset); clearInterval(ping); wss.clients.forEach((c) => c.terminate()); wss.close(() => server.close(() => res())); }),
   };
 }
 

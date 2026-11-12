@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
-import { COIN_PACKS, coinsLabel, talentsLabel, type CoinPack } from '../../data/currency';
 import { hashString, Rng } from '../../game/rng';
-import { ParentGate } from '../components/ParentGate';
 import { Portrait } from '../art/Portrait';
 import { Icon, type IconName } from '../art/icons';
-import { Treasure, type TreasureKind } from '../art/Treasure';
 import { audio } from '../../game/AudioManager';
 import { CHARACTERS } from '../../data/characters';
 import { MAX_CHARGES, POWERS, powerDuration } from '../../data/powers';
@@ -14,7 +11,7 @@ import { Btn, CoinIcon, Progress, RelicIcon, TopBar } from '../components/common
 import { UIManager, fmt, useProgress, type ShopTab } from '../UIManager';
 
 type Tab = ShopTab;
-const TAB_ICON: Record<ShopTab, IconName> = { destaque: 'star', moedas: 'coins', herois: 'heroes', trajes: 'shop', poderes: 'fire', melhorias: 'bolt' };
+const TAB_ICON: Record<ShopTab, IconName> = { destaque: 'star', herois: 'heroes', trajes: 'shop', poderes: 'fire', melhorias: 'bolt' };
 
 export function ShopScreen() {
   useProgress();
@@ -29,7 +26,6 @@ export function ShopScreen() {
         {(
           [
             ['destaque', 'Destaque'],
-            ['moedas', 'Denários'],
             ['herois', 'Heróis'],
             ['trajes', 'Roupas'],
             ['poderes', 'Poderes'],
@@ -51,7 +47,6 @@ export function ShopScreen() {
       </div>
       <div className="scroll-area">
         {tab === 'destaque' && <FeaturedTab onGo={setTab} />}
-        {tab === 'moedas' && <PacksTab />}
         {tab === 'herois' && (
           <div className="shop-list">
             {CHARACTERS.map((c) => {
@@ -399,14 +394,6 @@ function FeaturedTab({ onGo }: { onGo: (t: ShopTab) => void }) {
           </Btn>
         </div>
       )}
-      <button type="button" className="feat-banner" onClick={() => onGo('moedas')} data-testid="feat-packs">
-        <span className="feat-banner-art"><Treasure kind="tesouro" size={48} /></span>
-        <span>
-          <strong>Tesouro de Salomão</strong>
-          <small>Pacotes de denários e talentos</small>
-        </span>
-        <span className="feat-banner-go"><Icon name="play" size={18} tone="currentColor" /></span>
-      </button>
       <button type="button" className="feat-banner feat-banner-learn" onClick={() => UIManager.go('coins-info')} data-testid="feat-coins-info">
         <span className="feat-banner-art"><Icon name="verse" size={40} tone="#fff6c2" stroke="#5a3418" /></span>
         <span>
@@ -415,86 +402,6 @@ function FeaturedTab({ onGo }: { onGo: (t: ShopTab) => void }) {
         </span>
         <span className="feat-banner-go"><Icon name="play" size={18} tone="currentColor" /></span>
       </button>
-    </div>
-  );
-}
-
-function PacksTab() {
-  const d = progression.data;
-  const [buying, setBuying] = useState<CoinPack | null>(null);
-  const [done, setDone] = useState<CoinPack | null>(null);
-  return (
-    <div className="packs" data-testid="shop-packs">
-      <p className="muted center small">
-        <Icon name="family" size={16} /> Compras só com a permissão de um adulto.
-      </p>
-      <div className="packs-grid">
-        {COIN_PACKS.map((pk) => {
-          const sold = pk.once && d.purchases.includes(pk.id);
-          return (
-            <button
-              key={pk.id}
-              type="button"
-              className={`pack ${pk.badge ? 'pack-badged' : ''}`}
-              disabled={sold}
-              data-testid={`pack-${pk.id}`}
-              onClick={() => {
-                audio.play('ui');
-                setBuying(pk);
-              }}
-            >
-              {pk.badge && <span className="pack-badge">{pk.badge}</span>}
-              <span className="pack-art">
-                <Treasure kind={pk.id as TreasureKind} size={64} />
-              </span>
-              <strong>{pk.name}</strong>
-              <span className="pack-gets">
-                {pk.coins > 0 && (
-                  <span>
-                    <CoinIcon size={16} /> {fmt(pk.coins)}
-                  </span>
-                )}
-                {pk.talents > 0 && (
-                  <span>
-                    <RelicIcon size={16} /> {pk.talents}
-                  </span>
-                )}
-              </span>
-              <span className="pack-price">{sold ? 'Comprado' : pk.price}</span>
-            </button>
-          );
-        })}
-      </div>
-      <p className="muted center small">
-        Versão de teste: nenhuma cobrança é feita. Na versão da App Store, o pagamento é feito pela loja do aparelho.
-      </p>
-      {buying && (
-        <ParentGate
-          title={buying.name}
-          detail={`${[buying.coins ? coinsLabel(buying.coins) : '', buying.talents ? talentsLabel(buying.talents) : ''].filter(Boolean).join(' + ')} por ${buying.price}`}
-          onCancel={() => setBuying(null)}
-          onOk={() => {
-            const ok = progression.grantPack(buying.id, buying.coins, buying.talents, buying.once);
-            audio.play(ok ? 'victory' : 'error');
-            setDone(ok ? buying : null);
-            setBuying(null);
-          }}
-        />
-      )}
-      {done && (
-        <div className="overlay" onClick={() => setDone(null)} data-testid="pack-done">
-          <div className="panel center">
-            <div className="pack-art pack-art-big">
-              <Treasure kind={done.id as TreasureKind} size={110} />
-            </div>
-            <h2 className="sign-title">Obrigado!</h2>
-            <p>Você recebeu {[done.coins ? coinsLabel(done.coins) : '', done.talents ? talentsLabel(done.talents) : ''].filter(Boolean).join(' e ')}.</p>
-            <Btn variant="green" onClick={() => setDone(null)}>
-              Oba! ✔
-            </Btn>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

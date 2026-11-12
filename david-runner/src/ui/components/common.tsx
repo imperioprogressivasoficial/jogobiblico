@@ -62,11 +62,10 @@ export function RelicIcon({ size = 22 }: { size?: number }) {
   );
 }
 
-function openPacks() {
+/** Tocar nas moedas explica de onde elas vêm (não há compra com dinheiro de verdade no app). */
+function openCoinsInfo() {
   audio.play('ui');
-  UIManager.shopTab = 'moedas';
-  if (UIManager.screen === 'shop') UIManager.go('menu', true);
-  UIManager.go('shop');
+  UIManager.go('coins-info');
 }
 
 export function Currency() {
@@ -74,13 +73,11 @@ export function Currency() {
   const d = progression.data;
   return (
     <div className="currency">
-      <button type="button" className="pill pill-btn pill-buy" data-testid="coins-total" title="Denários" onClick={openPacks}>
+      <button type="button" className="pill pill-btn pill-buy" data-testid="coins-total" title="Denários" onClick={openCoinsInfo}>
         <CoinIcon /> {fmt(d.coins)}
-        <span className="pill-plus"><Icon name="plus" size={14} stroke="#fff" tone="none" /></span>
       </button>
-      <button type="button" className="pill pill-btn pill-buy" data-testid="talents-total" title="Talentos" onClick={openPacks}>
+      <button type="button" className="pill pill-btn pill-buy" data-testid="talents-total" title="Talentos" onClick={openCoinsInfo}>
         <RelicIcon /> {fmt(d.relics)}
-        <span className="pill-plus"><Icon name="plus" size={14} stroke="#fff" tone="none" /></span>
       </button>
       <span className="pill pill-mult" title="Multiplicador de pontuação">
         x{progression.baseMultiplier}

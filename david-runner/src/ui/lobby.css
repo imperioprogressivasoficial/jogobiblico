@@ -330,6 +330,9 @@
 /* ---------------------------------------------------------------- LOJA */
 .tabs {
   overflow-x: auto;
+  /* centralizado só quando cabe; se transbordar, começa do início (a 1ª aba não fica cortada) */
+  justify-content: flex-start;
+  justify-content: safe center;
   touch-action: pan-x;
   scrollbar-width: none;
   flex-wrap: nowrap !important;
@@ -2252,4 +2255,69 @@ button.webgl-error {
   border: 0;
   pointer-events: auto;
   cursor: pointer;
+}
+
+/* Exército de Gideão */
+.gd-trumpet {
+  position: absolute;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  min-width: 220px;
+  padding: 18px 28px;
+  border: 4px solid #fff;
+  border-radius: 999px;
+  background: linear-gradient(160deg, #ffb02e, #e8590c);
+  color: #fff;
+  font-family: var(--font-title);
+  font-size: 26px;
+  box-shadow: var(--card-shadow);
+  touch-action: manipulation;
+  user-select: none;
+}
+.gd-trumpet:active {
+  transform: translateX(-50%) scale(0.94);
+}
+.gd-trumpet small {
+  display: block;
+  font-size: 15px;
+  opacity: 0.85;
+}
+
+/* Jogo completo (acesso com código) */
+.access-perks ul {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+  display: grid;
+  gap: 10px;
+}
+.access-perks li {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  text-align: left;
+}
+.access-form {
+  display: grid;
+  gap: 10px;
+}
+.access-form input {
+  font-size: 22px;
+  letter-spacing: 2px;
+  text-align: center;
+  padding: 12px;
+  border-radius: 14px;
+  border: 3px solid #d8c9a8;
+  text-transform: uppercase;
+}
+.access-err {
+  color: #c0392b;
+  font-weight: 800;
+  margin: 0;
+}
+.access-screen .scroll-area {
+  display: grid;
+  gap: 14px;
+  align-content: start;
 }

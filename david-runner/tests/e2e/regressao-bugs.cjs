@@ -1,4 +1,4 @@
-// Regressões de bugs: toque duplo em reviver / no PIN da compra, apagar progresso, save corrompido, narrador.
+// Regressões de bugs: toque duplo em reviver / no PIN do responsável, apagar progresso, save corrompido, narrador.
 // Uso: URL=http://localhost:4301/ node tests/e2e/regressao-bugs.cjs
 const { chromium, devices } = require('playwright');
 const URL = process.env.URL || 'http://localhost:4173/';
@@ -50,24 +50,26 @@ const ok = (c, m) => { console.log((c ? 'ok  ' : 'FALHOU: ') + m); if (!c) fail+
   await p.click('[data-testid=btn-menu]');
   await p.waitForSelector('[data-testid=main-menu]');
 
-  // compra com PIN: toque duplo no último dígito credita uma vez só
-  const c0 = (await prog()).coins;
-  await p.evaluate(() => window.__davidRunner.ui.go('shop'));
-  await p.click('[data-testid=tab-moedas]');
-  await p.click('[data-testid=pack-bolsa]');
+  // PIN do responsável (ativar acesso): toque duplo no último dígito abre o formulário uma vez só
+  await p.route('**/access/activate', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, plan: 'anual', until: '2099-01-01T00:00:00.000Z' }) }));
+  await p.evaluate(() => window.__davidRunner.ui.go('access'));
+  await p.click('[data-testid=access-open]');
   for (const k of '123') await p.click(`[data-testid=pg-key-${k}]`);
   await p.evaluate(() => { const b = document.querySelector('[data-testid=pg-key-4]'); b.click(); b.click(); });
-  await p.waitForSelector('[data-testid=pack-done]');
-  const c1 = (await prog()).coins;
-  ok(c1 - c0 === 1000, `pacote creditado uma vez (+${c1 - c0})`);
+  await p.waitForSelector('[data-testid=access-form]');
+  ok((await p.$$('[data-testid=access-form]')).length === 1 && (await p.$('[data-testid=parent-gate]')) === null, 'PIN certo abre o formulário do código uma vez');
 
-  // PIN errado 5 vezes bloqueia por um tempo
-  await p.click('[data-testid=pack-done]');
-  await p.click('[data-testid=pack-bolsa]');
+  // PIN errado 5 vezes bloqueia por um tempo, mesmo fechando e abrindo a janela de novo
+  await p.evaluate(() => window.__davidRunner.ui.back());
+  await p.evaluate(() => window.__davidRunner.ui.go('access'));
+  await p.click('[data-testid=access-open]');
   for (let i = 0; i < 5; i++) for (const k of '9999') await p.click(`[data-testid=pg-key-${k}]`);
+  await p.click('[data-testid=pg-cancel]');
+  await p.click('[data-testid=access-open]');
   for (const k of '1234') await p.click(`[data-testid=pg-key-${k}]`);
   await p.waitForTimeout(400);
-  ok((await p.$('[data-testid=pack-done]')) === null && (await p.$('[data-testid=parent-gate]')) !== null, 'após 5 erros o PIN correto fica bloqueado por um tempo');
+  ok((await p.$('[data-testid=access-form]')) === null && (await p.$('[data-testid=parent-gate]')) !== null, 'após 5 erros o PIN correto fica bloqueado por um tempo (mesmo reabrindo)');
+  await p.click('[data-testid=pg-cancel]');
 
   // narrador: aba em segundo plano para a voz (sem erros)
   ok(errs.length === 0, 'sem erros de console ' + errs.join('|'));

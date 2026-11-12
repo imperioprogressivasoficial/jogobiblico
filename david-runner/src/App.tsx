@@ -21,9 +21,17 @@ import { QuizMode } from './ui/screens/modes/QuizMode';
 import { MemoryMode } from './ui/screens/modes/MemoryMode';
 import { VerseMode } from './ui/screens/modes/VerseMode';
 import { SlingMode } from './ui/screens/modes/SlingMode';
+import { GideonMode } from './ui/screens/modes/GideonMode';
+import { AccessScreen } from './ui/screens/AccessScreen';
+import { useEffect } from 'react';
+import { progression } from './state/ProgressionManager';
 
 export function App() {
   const screen = useScreen();
+  // confere o código de acesso ao abrir (sem internet, mantém o que já tinha)
+  useEffect(() => {
+    void progression.refreshAccess();
+  }, []);
   return (
     <div className={`app screen-${screen}`}>
       <GameCanvas />
@@ -48,6 +56,8 @@ export function App() {
         {screen === 'mode-memory' && <MemoryMode />}
         {screen === 'mode-verse' && <VerseMode />}
         {screen === 'mode-sling' && <SlingMode />}
+        {screen === 'mode-gideon' && <GideonMode />}
+        {screen === 'access' && <AccessScreen />}
       </div>
       <Toasts />
     </div>

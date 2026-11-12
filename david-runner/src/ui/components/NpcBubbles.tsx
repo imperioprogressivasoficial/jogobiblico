@@ -6,6 +6,7 @@ import { progression } from '../../state/ProgressionManager';
 import { speak, stopSpeaking } from '../narrator';
 import { UIManager } from '../UIManager';
 import { featuredToday } from '../screens/ShopScreen';
+import { playMode } from '../screens/ModesScreen';
 
 /**
  * Balões de fala dos NPCs do lobby. Cada NPC escolhe a frase mais relevante para o momento
@@ -41,7 +42,7 @@ function linesFor(id: string): Line[] {
     L.push({ text: 'Jesus disse: "Eu sou o bom pastor". Ele cuida de cada ovelhinha, e de você também!', weight: 1.5 });
   }
   if (id === 'tomas') {
-    L.push({ text: all && !dl.chest ? `${name}, você terminou a Jornada do Dia! Corre lá abrir o Baú!` : all ? 'Você já abriu o baú de hoje. Amanhã tem mais!' : !dl.challenge_done ? `Vem jogar ${mode.name} comigo? É o desafio de hoje!` : `Falta a corrida de 150 metros pra ganhar o baú, ${name}!`, weight: 5, go: !dl.challenge_done ? () => UIManager.go(mode.screen === 'run' ? 'modes' : mode.screen) : undefined });
+    L.push({ text: all && !dl.chest ? `${name}, você terminou a Jornada do Dia! Corre lá abrir o Baú!` : all ? 'Você já abriu o baú de hoje. Amanhã tem mais!' : !dl.challenge_done ? `Vem jogar ${mode.name} comigo? É o desafio de hoje!` : `Falta a corrida de 150 metros pra ganhar o baú, ${name}!`, weight: 5, go: !dl.challenge_done ? () => playMode(mode) : undefined });
     L.push({ text: dl.streak >= 2 ? `Uau, ${dl.streak} dias seguidos! Não perde a sequência, hein!` : 'Se você jogar todo dia, a chama da sequência cresce!', weight: dl.streak >= 2 ? 3 : 1.5 });
     L.push({ text: 'Toque duas vezes na tela durante a corrida pra usar o poder. É demais!', weight: 1 });
   }

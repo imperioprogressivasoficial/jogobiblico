@@ -229,6 +229,13 @@ export function GameScreen() {
     setPhase('playing');
   }
 
+  // botão voltar do Android com o jogo pausado: continua a corrida (a pausa tem o botão de sair)
+  useEffect(() => {
+    if (phase !== 'paused') return;
+    return UIManager.pushBackHandler(() => resumeGame());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
   function pause() {
     engine.pause();
     setPhase('paused');

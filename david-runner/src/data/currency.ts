@@ -110,26 +110,3 @@ export const BIBLE_COINS: BibleCoin[] = [
     color: '#f2c230',
   },
 ];
-
-/** Pacotes de denários e talentos vendidos pela loja do aparelho (App Store / Google Play). */
-export interface CoinPack {
-  id: string;
-  name: string;
-  coins: number;
-  talents: number;
-  /** Preço exibido (a cobrança real é da loja do aparelho). */
-  price: string;
-  badge?: string;
-  /** Só pode ser comprado uma vez. */
-  once?: boolean;
-  art: string;
-}
-
-export const COIN_PACKS: CoinPack[] = [
-  { id: 'bolsa', name: 'Bolsinha de Denários', coins: 1_000, talents: 0, price: 'R$ 4,90', art: '👝' },
-  { id: 'jarro', name: 'Jarro de Denários', coins: 3_000, talents: 2, price: 'R$ 9,90', badge: '+ bônus', art: '🏺' },
-  { id: 'bau', name: 'Baú do Templo', coins: 8_000, talents: 6, price: 'R$ 19,90', badge: 'Mais vendido', art: '🧰' },
-  { id: 'talentos', name: 'Saco de Talentos', coins: 0, talents: 25, price: 'R$ 24,90', art: '💰' },
-  { id: 'tesouro', name: 'Tesouro de Salomão', coins: 25_000, talents: 30, price: 'R$ 49,90', badge: 'Melhor valor', art: '👑' },
-  { id: 'inicio', name: 'Pacote do Pastorzinho', coins: 2_500, talents: 10, price: 'R$ 7,90', badge: 'Só 1 vez', once: true, art: '🐑' },
-];

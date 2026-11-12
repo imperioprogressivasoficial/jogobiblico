@@ -1,4 +1,4 @@
-// Cadastro, lobby, loja (pacote com PIN), Moedas da Bíblia e os 5 modos.
+// Cadastro, lobby, loja, jogo completo (código de acesso), Moedas da Bíblia e os modos.
 // Uso: URL=http://localhost:4173/ node tests/e2e/cadastro-loja-modos.cjs [pasta-de-capturas]
 const { chromium, devices } = require('playwright');
 const O = process.argv[2] || require('os').tmpdir();
@@ -21,14 +21,23 @@ const O = process.argv[2] || require('os').tmpdir();
   await shot('04-done'); await p.click('[data-testid=ob-next]');
   await p.waitForSelector('[data-testid=main-menu]'); await p.waitForTimeout(1500); await shot('05-lobby');
   await p.click('[data-testid=btn-shop]'); await p.waitForSelector('[data-testid=shop-featured]'); await shot('06-shop');
-  await p.click('[data-testid=tab-moedas]'); await shot('07-packs');
-  await p.click('[data-testid=pack-bau]'); for (const k of '1234') await p.click(`[data-testid=pg-key-${k}]`);
-  await p.waitForSelector('[data-testid=pack-done]'); await shot('08-bought');
-  const coins = await p.evaluate(() => window.__davidRunner.progression.data.coins);
-  await p.click('[data-testid=pack-done]');
+  if (await p.$('[data-testid=tab-moedas]')) throw new Error('a loja não pode vender denários com dinheiro');
   await p.$eval('[data-testid=tab-destaque]', (e) => e.click()); await p.click('[data-testid=feat-coins-info]'); await p.waitForSelector('[data-testid=coins-info]'); await shot('09-coins');
   await p.click('[data-testid=back]'); await p.click('[data-testid=back]');
   await p.click('[data-testid=btn-modes]'); await p.waitForSelector('[data-testid=modes-screen]'); await shot('10-modes');
+  // versão grátis: um modo que não é o desafio do dia pede o jogo completo
+  const daily = await p.evaluate(() => window.__davidRunner.progression.data.daily.challenge);
+  const locked = ['quiz', 'memoria', 'versiculo', 'funda', 'gideao'].find((m) => m !== daily);
+  await p.click(`[data-testid=mode-${locked}]`); await p.waitForSelector('[data-testid=access-screen]'); await shot('07-access');
+  // o responsável ativa o código comprado fora do app (servidor simulado)
+  await p.route('**/access/activate', (r) => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, plan: 'anual', until: '2099-01-01T00:00:00.000Z' }) }));
+  await p.click('[data-testid=access-open]'); for (const k of '1234') await p.click(`[data-testid=pg-key-${k}]`);
+  await p.fill('[data-testid=access-code]', 'abcd efgh jkmn'); await p.click('[data-testid=access-send]');
+  await p.waitForSelector('[data-testid=access-ok]'); await shot('08-access-ok');
+  const access = await p.evaluate(() => window.__davidRunner.progression.data.access);
+  if (!access || access.code !== 'ABCD-EFGH-JKMN') throw new Error('acesso não ativado: ' + JSON.stringify(access));
+  await p.click('[data-testid=access-ok] button');
+  await p.waitForSelector('[data-testid=modes-screen]');
   await p.click('[data-testid=mode-quiz]'); await p.waitForSelector('[data-testid=mode-quiz]'); await shot('11-quiz'); await p.click('[data-testid=mq-opt-0]'); await p.waitForTimeout(500); await shot('12-quiz-ans');
   await p.click('[data-testid=back]');
   await p.click('[data-testid=mode-memoria]'); await p.click('[data-testid=mm-card-0]'); await p.click('[data-testid=mm-card-1]'); await p.waitForTimeout(300); await shot('13-memory');
@@ -39,8 +48,11 @@ const O = process.argv[2] || require('os').tmpdir();
   const box = await p.locator('[data-testid=ms-canvas]').boundingBox();
   const sx = box.x + box.width * (80 / 400), sy = box.y + box.height * (500 / 640);
   await p.mouse.move(sx, sy); await p.mouse.down(); await p.mouse.move(sx - 60, sy + 50, { steps: 5 }); await shot('15-sling-aim'); await p.mouse.up(); await p.waitForTimeout(700); await shot('16-sling');
-  if (coins !== 8300) throw new Error('pacote Baú do Templo deveria somar 8.000 denários (tem ' + coins + ')');
+  await p.click('[data-testid=back]');
+  await p.click('[data-testid=mode-gideao]'); await p.waitForSelector('[data-testid=gd-canvas]'); await p.waitForTimeout(4500); await shot('17-gideon');
+  const army = await p.textContent('[data-testid=gd-army]');
+  if (!/\d+/.test(army)) throw new Error('Gideão sem placar: ' + army);
   if (errs.length) throw new Error('erros: ' + errs.join(' | '));
-  console.log('ok  cadastro, lobby, loja com PIN, moedas da Bíblia e 5 modos');
+  console.log('ok  cadastro, lobby, loja sem pacotes pagos, acesso com código, moedas da Bíblia e os modos');
   await b.close();
 })().catch((e) => { console.error('FAIL', e.message); process.exit(1); });

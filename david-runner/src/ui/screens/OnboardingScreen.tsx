@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { audio } from '../../game/AudioManager';
 import { CHARACTERS } from '../../data/characters';
 import { progression } from '../../state/ProgressionManager';
@@ -11,7 +11,7 @@ const WELCOME = { coins: 300, talents: 3 };
 
 /**
  * Cadastro na primeira abertura: a criança diz o nome, a idade e escolhe o herói;
- * o responsável cria o PIN das compras, informa o e-mail e aceita os termos.
+ * o responsável cria o PIN da área dos pais, informa o e-mail e aceita os termos.
  */
 export function OnboardingScreen() {
   const [step, setStep] = useState(0);
@@ -28,6 +28,12 @@ export function OnboardingScreen() {
   const pinOk = /^\d{4}$/.test(pin) && pin === pin2;
   const canNext = [true, name.trim().length >= 2, age > 0, !!gender, !!avatar, emailOk && pinOk && consent, true][step];
   const total = 6;
+
+  // botão voltar do Android: volta um passo do cadastro (depois de criar a conta, não volta mais)
+  useEffect(() => {
+    if (step < 1 || step > 5) return;
+    return UIManager.pushBackHandler(() => setStep((s) => Math.max(0, s - 1)));
+  }, [step]);
 
   const next = () => {
     if (!canNext) {
@@ -183,7 +189,7 @@ export function OnboardingScreen() {
           <>
             <div className="ob-emoji">👨‍👩‍👧</div>
             <h1 className="ob-title">Agora chame um adulto</h1>
-            <p className="ob-text small">O responsável cria o PIN que protege as compras e recebe as novidades por e-mail.</p>
+            <p className="ob-text small">O responsável cria o PIN que protege a área dos pais e recebe as novidades por e-mail.</p>
             <label className="ob-label">
               E-mail do responsável
               <input className="ob-input" data-testid="ob-email" type="email" inputMode="email" autoComplete="email" placeholder="nome@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />

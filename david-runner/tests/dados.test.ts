@@ -5,7 +5,6 @@ import { CHARACTERS } from '../src/data/characters';
 import { POWERS } from '../src/data/powers';
 import { ACHIEVEMENTS, MISSION_POOL } from '../src/data/progression';
 import { MODES } from '../src/data/modes';
-import { COIN_PACKS } from '../src/data/currency';
 
 const dup = (ids: string[]) => ids.filter((x, i) => ids.indexOf(x) !== i);
 
@@ -31,7 +30,6 @@ describe('integridade dos dados', () => {
     expect(dup(ACHIEVEMENTS.map((a) => a.id))).toEqual([]);
     expect(dup(MISSION_POOL.map((m) => m.id))).toEqual([]);
     expect(dup(MODES.map((m) => m.id))).toEqual([]);
-    expect(dup(COIN_PACKS.map((m) => m.id))).toEqual([]);
   });
   it('poderes desbloqueados por história apontam para uma história que existe', () => {
     for (const p of POWERS) if (p.unlock.type === 'story') expect(STORY.some((s) => s.id === (p.unlock as { storyId: string }).storyId), p.id).toBe(true);

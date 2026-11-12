@@ -1,3 +1,4 @@
+import { isFreeStory } from '../data/access';
 import { useSyncExternalStore } from 'react';
 import type { GameEngine } from '../game/GameEngine';
 import { DIFFICULTY } from '../data/chariot';
@@ -23,11 +24,13 @@ export type Screen =
   | 'mode-memory'
   | 'mode-verse'
   | 'mode-sling'
+  | 'mode-gideon'
+  | 'access'
   | 'coins-info'
   | 'parents'
   | 'world';
 
-export type ShopTab = 'destaque' | 'moedas' | 'herois' | 'trajes' | 'melhorias' | 'poderes';
+export type ShopTab = 'destaque' | 'herois' | 'trajes' | 'melhorias' | 'poderes';
 
 /** Navegação entre telas + acesso ao motor 3D compartilhado. */
 class UIManagerImpl {
@@ -117,6 +120,8 @@ class UIManagerImpl {
 
   /** Leva o herói para dentro do cenário da história: corrida no mapa dela, com narração e quiz. */
   startStoryRun(story: StoryEpisode): void {
+    // versão grátis: só as primeiras histórias e a história do dia
+    if (!progression.hasAccess && !isFreeStory(story, progression.data.daily.storyId)) return this.go('access');
     this.storyRun = story;
     this.startRun(story.mapId, true);
   }

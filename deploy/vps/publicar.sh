@@ -22,7 +22,7 @@ cp -r "$ROOT/david-runner/dist/." "$TMP/site/jogar/"
 tar czf "$TMP/site.tgz" -C "$TMP/site" .
 tar czf "$TMP/expo.tgz" -C "$ROOT/david-runner-expo" --exclude=node_modules --exclude=.expo --exclude=dist .
 # servidor do Mundo Aberto (sem node_modules; o servidor instala sozinho)
-tar czf "$TMP/world.tgz" -C "$ROOT/world-server" --exclude=node_modules --exclude=test.js .
+tar czf "$TMP/world.tgz" -C "$ROOT/world-server" --exclude=node_modules --exclude=test.js --exclude=access.test.js --exclude="dados/acessos.json*" .
 for k in site expo; do
   curl -fsS -X PUT --data-binary "@$TMP/$k.tgz" -H "x-token: $DR_UPLOAD_TOKEN" "$HOST/david-runner-upload/$k"; echo
 done

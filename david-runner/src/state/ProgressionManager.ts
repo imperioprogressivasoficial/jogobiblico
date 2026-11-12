@@ -1,3 +1,4 @@
+import { callAccess, type AccessResult } from '../data/access';
 import { CHARACTERS, getCharacter, type CharacterDef } from '../data/characters';
 import { MAPS, getMap, type MapDef } from '../data/maps';
 import {
@@ -65,8 +66,12 @@ export interface SaveData {
   profile: Profile | null;
   /** Melhor pontuação em cada modo de jogo. */
   modeBest: Record<string, number>;
-  /** Pacotes da loja já comprados (ids), para pacotes de compra única. */
+  /** Presentes únicos já recebidos (ids), ex.: boas-vindas. */
   purchases: string[];
+  /** Acesso ao jogo completo, ativado com o código comprado fora do app (null = versão grátis). */
+  access: { code: string; plan: string; until: string | null } | null;
+  /** Id aleatório deste aparelho (liga o código de acesso ao aparelho; não identifica a pessoa). */
+  deviceId: string;
   coins: number;
   relics: number;
   stats: Record<Exclude<StatKey, ComputedStat>, number>;
@@ -139,6 +144,8 @@ function defaults(): SaveData {
     profile: null,
     modeBest: {},
     purchases: [],
+    access: null,
+    deviceId: '',
     coins: 0,
     relics: 0,
     stats: {
@@ -208,6 +215,15 @@ function merge(base: SaveData, loaded: Partial<SaveData>): SaveData {
   return out;
 }
 
+function newDeviceId(): string {
+  try {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+  } catch {
+    /* sem crypto */
+  }
+  return `d-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
 const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.floor(v)) : 0);
 
 /** Corrige saves corrompidos/antigos: moedas negativas, listas ausentes, ids que não existem mais. */
@@ -217,6 +233,9 @@ function sanitize(d: SaveData): void {
   for (const k of Object.keys(d.stats) as (keyof SaveData['stats'])[]) d.stats[k] = num(d.stats[k]);
   const strs = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
   d.purchases = strs(d.purchases);
+  const a = d.access as unknown as Record<string, unknown> | null;
+  d.access = a && typeof a === 'object' && typeof a.code === 'string' && typeof a.plan === 'string' ? { code: a.code, plan: a.plan, until: typeof a.until === 'string' ? a.until : null } : null;
+  if (typeof d.deviceId !== 'string' || d.deviceId.length < 8) d.deviceId = newDeviceId();
   d.characters = strs(d.characters).filter((id) => CHARACTERS.some((c) => c.id === id));
   if (!d.characters.includes('davi')) d.characters.unshift('davi');
   if (!d.characters.includes(d.selectedCharacter)) d.selectedCharacter = d.characters[0];
@@ -304,12 +323,14 @@ export class ProgressionManager {
 
   resetProgress(): void {
     const settings = this.data.settings;
-    const { profile, purchases } = this.data;
+    const { profile, purchases, access, deviceId } = this.data;
     this.data = defaults();
     this.data.settings = settings;
-    // a conta do responsável e as compras de pacote único não se apagam (evita ganhar o presente de novo)
+    // a conta do responsável, o acesso pago e os presentes únicos não se apagam
     this.data.profile = profile;
     this.data.purchases = purchases;
+    this.data.access = access;
+    this.data.deviceId = deviceId;
     this.ensureDailyMissions();
     this.commit();
   }
@@ -352,7 +373,7 @@ export class ProgressionManager {
     const rng = new Rng(hashString('dia-' + day));
     const pool = STORY.filter((s) => this.data.scrolls.includes(s.id) && !this.data.storiesRead.includes(s.id));
     const story = pool[0] ?? STORY.filter((s) => this.data.scrolls.includes(s.id))[Math.floor(rng.next() * Math.max(1, this.data.scrolls.length))] ?? STORY[0];
-    const modes = ['quiz', 'versiculo', 'memoria', 'funda'];
+    const modes = ['quiz', 'versiculo', 'memoria', 'funda', 'gideao'];
     this.data.daily = { ...dl, day, storyId: story.id, challenge: modes[Math.floor(rng.next() * modes.length)], story: false, challenge_done: false, run: false, chest: false };
     this.commit();
   }
@@ -792,6 +813,35 @@ export class ProgressionManager {
     for (const p of POWERS) this.data.powers[p.id] = { charges: MAX_CHARGES, level: this.data.powers[p.id]?.level ?? 0 };
     this.data.chariot = { ...this.data.powers.chariot };
     this.data.tutorialDone = true;
+    this.data.access = { code: 'EQUIPE', plan: 'equipe', until: null };
+    this.commit();
+  }
+
+  // ------------------------------------------------------------ acesso (compra feita fora do app)
+  /** O jogo completo está liberado neste aparelho? */
+  get hasAccess(): boolean {
+    const a = this.data.access;
+    return !!a && (!a.until || Date.parse(a.until) > Date.now());
+  }
+
+  /** Ativa o código que a família recebeu depois de comprar fora do app. */
+  async activateAccess(code: string): Promise<AccessResult> {
+    const r = await callAccess('activate', code, this.data.deviceId);
+    if (r.ok) {
+      this.data.access = { code, plan: r.plan, until: r.until };
+      this.commit();
+    }
+    return r;
+  }
+
+  /** Confere o código ao abrir o app. Sem internet, mantém o acesso que já tinha. */
+  async refreshAccess(): Promise<void> {
+    const a = this.data.access;
+    if (!a || a.plan === 'equipe') return;
+    const r = await callAccess('check', a.code, this.data.deviceId);
+    if (r.ok) this.data.access = { ...a, plan: r.plan, until: r.until };
+    else if (r.error === 'codigo' || r.error === 'expirado') this.data.access = null;
+    else return;
     this.commit();
   }
 
@@ -819,7 +869,7 @@ export class ProgressionManager {
   }
 
   // ------------------------------------------------------------ loja
-  /** Credita um pacote de denários/talentos (a cobrança é feita pela loja do aparelho). */
+  /** Credita um presente de denários/talentos (ex.: boas-vindas). Não há compra com dinheiro no app. */
   grantPack(id: string, coins: number, relics: number, once = false): boolean {
     if (once && this.data.purchases.includes(id)) return false;
     if (!Number.isFinite(coins) || !Number.isFinite(relics) || coins < 0 || relics < 0) return false;

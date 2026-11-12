@@ -4,18 +4,21 @@ import { progression } from '../../state/ProgressionManager';
 import { Btn } from './common';
 
 /**
- * Área dos pais: antes de qualquer compra com dinheiro de verdade, pede o PIN do responsável
+ * Área dos pais: pede o PIN do responsável antes de abrir o painel dos pais ou ativar o acesso
  * (criado no cadastro). Sem conta, pede uma conta de adulto (multiplicação).
  */
+/**
+ * Tentativas erradas seguidas: depois de 5, espera 30 s (a criança não adivinha o PIN).
+ * Fica fora do componente para valer mesmo se a janela for fechada e aberta de novo.
+ */
+const lock = { fails: 0, until: 0 };
+
 export function ParentGate({ title, detail, onOk, onCancel }: { title: string; detail: string; onOk: () => void; onCancel: () => void }) {
   const hasPin = !!progression.data.profile?.pin;
   const [pin, setPin] = useState('');
   const [err, setErr] = useState(false);
   /** Impede confirmar duas vezes (toque duplo no último dígito creditaria a compra em dobro). */
   const fired = useRef(false);
-  /** Tentativas erradas seguidas: depois de 5, espera 30 s (a criança não adivinha o PIN). */
-  const fails = useRef(0);
-  const lockedUntil = useRef(0);
   const [q] = useState(() => {
     const a = 6 + Math.floor(Math.random() * 7);
     const b = 3 + Math.floor(Math.random() * 7);
@@ -23,7 +26,11 @@ export function ParentGate({ title, detail, onOk, onCancel }: { title: string; d
   });
 
   const press = (k: string) => {
-    if (fired.current || Date.now() < lockedUntil.current) return;
+    if (fired.current) return;
+    if (Date.now() < lock.until) {
+      setErr(true);
+      return;
+    }
     audio.play('ui');
     setErr(false);
     if (k === '⌫') return setPin((p) => p.slice(0, -1));
@@ -33,12 +40,13 @@ export function ParentGate({ title, detail, onOk, onCancel }: { title: string; d
     if (!done) return;
     const ok = hasPin ? progression.checkPin(next) : Number(next) === q.a * q.b;
     if (ok) {
+      lock.fails = 0;
       fired.current = true;
       onOk();
     } else {
-      if (++fails.current >= 5) {
-        fails.current = 0;
-        lockedUntil.current = Date.now() + 30000;
+      if (++lock.fails >= 5) {
+        lock.fails = 0;
+        lock.until = Date.now() + 30000;
       }
       audio.play('error');
       setErr(true);
@@ -56,7 +64,7 @@ export function ParentGate({ title, detail, onOk, onCancel }: { title: string; d
         <div className={`pg-dots ${err ? 'shake' : ''}`}>
           {hasPin ? [0, 1, 2, 3].map((i) => <span key={i} className={i < pin.length ? 'on' : ''} />) : <strong>{pin || '—'}</strong>}
         </div>
-        {err && <div className="pg-err">{hasPin ? 'PIN errado. Peça ajuda a um adulto.' : 'Resposta errada.'}</div>}
+        {err && <div className="pg-err">{Date.now() < lock.until ? 'Muitas tentativas. Espere 30 segundos.' : hasPin ? 'PIN errado. Peça ajuda a um adulto.' : 'Resposta errada.'}</div>}
         <div className="pg-keys">
           {['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'].map((k, i) =>
             k ? (

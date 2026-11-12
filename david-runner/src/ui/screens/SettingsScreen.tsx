@@ -51,7 +51,7 @@ export function SettingsScreen() {
               <span className="setting-val">{progression.data.profile.parentEmail}</span>
             </div>
             <div className="setting-row">
-              <span>Compras protegidas por PIN</span>
+              <span>Área dos pais protegida por PIN</span>
               <span className="setting-val">✔ Ativo</span>
             </div>
             <Btn variant="blue" size="sm" onClick={() => UIManager.go('parents')} testId="btn-parents">

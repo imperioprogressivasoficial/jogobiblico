@@ -126,7 +126,7 @@ function Panel() {
             <span className="setting-val">{p?.parentEmail}</span>
           </div>
           <div className="setting-row">
-            <span>Compras com PIN</span>
+            <span>Área dos pais com PIN</span>
             <span className="setting-val">✔ Ativo</span>
           </div>
           <div className="setting-row">

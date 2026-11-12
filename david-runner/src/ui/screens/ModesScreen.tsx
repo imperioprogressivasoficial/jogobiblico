@@ -1,3 +1,4 @@
+import { FREE_MODES } from '../../data/access';
 import { audio } from '../../game/AudioManager';
 import { MODES, type GameMode } from '../../data/modes';
 import { progression } from '../../state/ProgressionManager';
@@ -5,7 +6,15 @@ import { TopBar } from '../components/common';
 import { UIManager, fmt, useProgress } from '../UIManager';
 import { Icon } from '../art/icons';
 
+/** Modo liberado neste aparelho? (grátis: a Corrida e o desafio do dia) */
+export const modeOpen = (m: GameMode): boolean => progression.hasAccess || FREE_MODES.includes(m.id) || m.id === progression.data.daily.challenge;
+
 export function playMode(m: GameMode): void {
+  if (!modeOpen(m)) {
+    audio.play('ui');
+    UIManager.go('access');
+    return;
+  }
   audio.play('buy');
   UIManager.selectedMode = m.id;
   if (m.screen === 'run') UIManager.startRun();
@@ -40,7 +49,9 @@ export function ModesScreen() {
                   <small>{m.tagline}</small>
                 </span>
                 <span className="mode-best">
-                  {rec > 0 ? (
+                  {!modeOpen(m) ? (
+                    <span data-testid={`mode-lock-${m.id}`}>🔒 Completo</span>
+                  ) : rec > 0 ? (
                     <>
                       <Icon name="trophy" size={14} /> {fmt(rec)}
                     </>

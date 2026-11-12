@@ -4,6 +4,6 @@
   "private": true,
   "type": "module",
   "description": "Servidor do Mundo Aberto (beta): posições dos jogadores em tempo real, só frases prontas (sem chat livre).",
-  "scripts": { "start": "node server.js", "test": "node test.js" },
+  "scripts": { "start": "node server.js", "test": "node access.test.js && node test.js" },
   "dependencies": { "ws": "^8.18.0" }
 }
