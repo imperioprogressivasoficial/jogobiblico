@@ -1,0 +1,186 @@
+/*
+ * Tema "Céu Aberto" (escolhido pelo Bruno): cores chapadas e vivas, cartões brancos bem
+ * arredondados, sem contornos grossos nem sombras de madeira. Fonte Baloo 2.
+ * Carregado por último: só sobrescreve a aparência, não a estrutura das telas.
+ */
+:root {
+  --font-title: 'Baloo 2', 'Arial Rounded MT Bold', system-ui, sans-serif;
+  --ceu: #8fd3ff;
+  --ceu-claro: #e9f7ff;
+  --sol: #ffc93c;
+  --grama: #58c25e;
+  --rosa: #ff5c8a;
+  --azul: #1f78c1;
+  --lilas: #b07cff;
+  --tinta: #17324d;
+  --ink: var(--tinta);
+  --outline: var(--tinta);
+  --green: var(--grama);
+  --green-dark: #3a9a40;
+  --blue: var(--azul);
+  --blue-dark: #165c96;
+  --red: var(--rosa);
+  --red-dark: #d63e6a;
+  --pop-yellow: var(--sol);
+  --pop-pink: var(--rosa);
+  --pop-green: var(--grama);
+  --pop-purple: var(--lilas);
+  --card-shadow: 0 6px 0 rgba(23, 50, 77, 0.12), 0 10px 24px rgba(23, 50, 77, 0.12);
+}
+
+html,
+body,
+#root {
+  background: var(--ceu);
+}
+
+/* títulos: Baloo 2 forte, sem sombra de texto */
+.btn,
+.sign-title,
+.section-title,
+.tab,
+.pill,
+h1,
+h2,
+h3 {
+  font-family: var(--font-title);
+  font-weight: 800;
+  text-shadow: none !important;
+}
+
+/* botões chapados: uma cor, cantos bem redondos, "degrau" suave embaixo */
+.btn {
+  border: 0 !important;
+  border-radius: 22px;
+  letter-spacing: 0.3px;
+  box-shadow: 0 5px 0 var(--shadow, rgba(23, 50, 77, 0.2));
+}
+.btn:active:not(:disabled) {
+  box-shadow: 0 2px 0 var(--shadow, rgba(23, 50, 77, 0.2));
+}
+.btn-xl {
+  border-radius: 30px;
+  animation: none;
+}
+.btn-gold {
+  background: var(--sol);
+  color: var(--tinta);
+  --shadow: #d9a21f;
+}
+.btn-green {
+  background: var(--grama);
+  color: #fff;
+  --shadow: #3a9a40;
+}
+.btn-blue {
+  background: var(--azul);
+  color: #fff;
+  --shadow: #165c96;
+}
+.btn-red {
+  background: var(--rosa);
+  color: #fff;
+  --shadow: #d63e6a;
+}
+.btn-wood,
+.btn-ghost {
+  background: #fff;
+  color: var(--tinta);
+  --shadow: rgba(23, 50, 77, 0.15);
+}
+.btn-wood svg,
+.btn-ghost svg {
+  color: var(--tinta);
+}
+
+/* placas de título viram etiquetas brancas */
+.sign-title {
+  background: #fff;
+  color: var(--tinta);
+  border: 0;
+  border-radius: 18px;
+  box-shadow: none;
+}
+.section-title {
+  color: var(--tinta);
+}
+
+/* painéis e cartões: brancos, sem borda grossa */
+.panel {
+  background: #fff;
+  border: 0;
+  border-radius: 28px;
+  box-shadow: 0 16px 40px rgba(23, 50, 77, 0.25);
+  color: var(--tinta);
+}
+.overlay {
+  background: rgba(15, 35, 55, 0.45);
+}
+.list-screen {
+  background: rgba(233, 247, 255, 0.94);
+  color: var(--tinta);
+}
+
+/* moedas e etiquetas: brancas com texto azul-escuro */
+.pill {
+  background: #fff;
+  color: var(--tinta);
+  border: 0;
+}
+.pill-mult {
+  background: var(--sol);
+}
+
+/* abas: brancas; a escolhida fica azul */
+.tab {
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--tinta);
+}
+.tab.on {
+  background: var(--azul);
+  color: #fff;
+}
+
+/* lobby */
+.lobby-round {
+  border: 0 !important;
+  border-radius: 26px !important;
+  background: #fff !important;
+  color: var(--tinta) !important;
+  box-shadow: 0 6px 0 rgba(23, 50, 77, 0.12) !important;
+}
+.lobby-round svg {
+  color: var(--tinta);
+}
+.lobby-round-shop {
+  background: var(--rosa) !important;
+  color: #fff !important;
+}
+.lobby-round-shop svg {
+  color: #fff;
+}
+.lobby-profile,
+.daily-pill,
+.lobby-more-sheet {
+  background: #fff !important;
+  color: var(--tinta) !important;
+  border: 0 !important;
+}
+.lobby-hero-name strong {
+  color: #fff;
+}
+.lobby-tap.btn-xl,
+.lobby-play .btn-green {
+  background: var(--sol);
+  color: var(--tinta);
+  --shadow: #d9a21f;
+}
+
+/* cartões de modo: chapados, sem contorno */
+.mode-card {
+  border: 0 !important;
+  border-radius: 28px !important;
+  box-shadow: 0 6px 0 rgba(23, 50, 77, 0.15) !important;
+}
