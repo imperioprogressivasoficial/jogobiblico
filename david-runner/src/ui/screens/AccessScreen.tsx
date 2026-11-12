@@ -58,7 +58,6 @@ export function AccessScreen() {
                 <li><Icon name="journey" size={22} /> Todas as histórias da Bíblia, da Criação à Igreja</li>
                 <li><Icon name="modes" size={22} /> Todos os modos: Show da Fé, Memória, Versículos, Funda de Davi e Exército de Gideão</li>
                 <li><Icon name="map" size={22} /> Mundo Aberto para brincar com amigos</li>
-                <li><Icon name="family" size={22} /> Painel dos pais com o que a criança aprendeu</li>
               </ul>
               <p className="muted small center">Peça para um adulto da sua família liberar o jogo completo. Só o responsável, com o PIN, ativa o código.</p>
             </div>

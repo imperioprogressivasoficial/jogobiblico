@@ -5,7 +5,8 @@ import { progression } from '../../state/ProgressionManager';
 import { Progress, TopBar } from '../components/common';
 import { StoryReader } from '../components/StoryReader';
 import { StoryScene } from '../components/StoryScene';
-import { useProgress } from '../UIManager';
+import { UIManager, useProgress } from '../UIManager';
+import { isFreeStory } from '../../data/access';
 
 /**
  * Jornada Bíblica: a linha do tempo da Bíblia, era por era (Criação → Igreja).
@@ -95,6 +96,8 @@ export function JourneyScreen() {
                               data-testid={`story-${s.id}`}
                               onClick={() => {
                                 audio.play('ui');
+                                // versão grátis: só as primeiras histórias e a do dia; as outras pedem o jogo completo
+                                if (!progression.hasAccess && !isFreeStory(s, progression.data.daily.storyId)) return UIManager.go('access');
                                 setReading(s);
                               }}
                             >
