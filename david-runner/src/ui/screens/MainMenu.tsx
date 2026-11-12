@@ -13,7 +13,9 @@ import { Icon, type IconName } from '../art/icons';
 import { Treasure } from '../art/Treasure';
 
 /**
- * Lobby, com pouca coisa na tela de uma vez:
+ * Lobby simples (pensado para crianças de 4 a 6 anos): perfil, moedas, Loja, Mais,
+ * a Aventura do Dia e um botão grande de JOGAR. O resto fica em "Mais".
+ * Antes:
  * - topo: perfil e moedas;
  * - centro: o herói (3D) com um só cartão pequeno da Loja do Dia;
  * - embaixo: a Jornada do Dia em uma linha, o modo + JOGAR e a barra de navegação.
@@ -25,7 +27,8 @@ export function MainMenu() {
   const char = getCharacter(d.selectedCharacter);
   const claimable = d.missions.list.filter((m) => m.progress >= m.target && !m.claimed).length;
   const unread = progression.unreadStories().length;
-  const mode = MODES.find((m) => m.id === UIManager.selectedMode) ?? MODES[0];
+  // JOGAR é sempre a corrida: os outros jogos ficam em "Mais > Jogos"
+  const run = MODES[0];
   const profile = d.profile;
   const [more, setMore] = useState(false);
 
@@ -33,11 +36,11 @@ export function MainMenu() {
     progression.ensureDailyMissions();
     progression.ensureDaily();
     const onKey = (e: KeyboardEvent) => {
-      if (e.code === 'Enter') playMode(mode);
+      if (e.code === 'Enter') playMode(run);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [mode]);
+  }, [run]);
 
   const go = (s: Screen) => {
     setMore(false);
@@ -45,10 +48,12 @@ export function MainMenu() {
   };
   const avatar = getCharacter(profile?.avatar ?? d.selectedCharacter);
   const moreItems: { id: Screen; icon: IconName; label: string; testId: string; badge?: number }[] = [
+    { id: 'journey', icon: 'journey', label: 'Histórias', testId: 'btn-journey', badge: unread },
+    { id: 'modes', icon: 'modes', label: 'Jogos', testId: 'btn-modes' },
+    { id: 'characters', icon: 'heroes', label: 'Heróis', testId: 'btn-characters' },
     { id: 'maps', icon: 'map', label: 'Mapas', testId: 'btn-maps' },
     { id: 'missions', icon: 'missions', label: 'Missões', testId: 'btn-missions', badge: claimable },
     { id: 'achievements', icon: 'trophy', label: 'Conquistas', testId: 'btn-achievements' },
-    { id: 'records', icon: 'records', label: 'Recordes', testId: 'btn-records' },
     { id: 'parents', icon: 'family', label: 'Pais', testId: 'btn-parents-menu' },
     { id: 'settings', icon: 'settings', label: 'Ajustes', testId: 'btn-settings' },
   ];
@@ -80,15 +85,12 @@ export function MainMenu() {
 
       <div className="lobby-col lobby-col-left">
         {side('shop', 'shop', 'Loja', 'btn-shop', undefined, 'lobby-round-shop')}
-        {side('journey', 'journey', 'Jornada', 'btn-journey', unread)}
-        {side('modes', 'modes', 'Modos', 'btn-modes')}
       </div>
       <div className="lobby-col lobby-col-right">
-        {side('characters', 'heroes', 'Heróis', 'btn-characters')}
         <button type="button" className={`lobby-round ${more ? 'on' : ''}`} onClick={() => { audio.play('ui'); setMore(!more); }} data-testid="btn-more" aria-label="Mais">
           <Icon name="plus" size={26} />
           <small>Mais</small>
-          {claimable > 0 && <span className="badge">{claimable}</span>}
+          {claimable + unread > 0 && <span className="badge">{claimable + unread}</span>}
         </button>
       </div>
 
@@ -99,7 +101,7 @@ export function MainMenu() {
 
       <button type="button" className={`daily-pill ${chestReady ? 'ready' : ''}`} onClick={() => { audio.play('ui'); setDailyOpen(true); }} data-testid="daily-card">
         <Icon name="star" size={16} tone="#ffd23f" stroke="#ffd23f" />
-        <span>Jornada do Dia</span>
+        <span>Aventura do Dia</span>
         <b>{dailyDone}/3</b>
         <span className="daily-pill-streak" data-testid="daily-streak">
           <Icon name="fire" size={14} tone="#ff9a2e" stroke="#ff6a1a" /> {dl.streak}
@@ -108,29 +110,8 @@ export function MainMenu() {
       </button>
 
       <div className="lobby-play">
-        <div className="lobby-play-row">
-          <button type="button" className="lobby-mode" onClick={() => UIManager.go('modes')} data-testid="lobby-mode">
-            <span className="lobby-mode-icon" style={{ background: `linear-gradient(160deg, ${mode.colors[0]}, ${mode.colors[1]})` }}>
-              <Icon name={mode.icon} size={20} />
-            </span>
-            <strong>{mode.name}</strong>
-            <span className="lobby-mode-change">trocar</span>
-          </button>
-          <button
-            type="button"
-            className="pill pill-btn pill-fire lobby-power"
-            title={`Poder equipado: ${progression.equippedPower.name}`}
-            data-testid="chariot-charges"
-            onClick={() => {
-              UIManager.shopTab = 'poderes';
-              UIManager.go('shop');
-            }}
-          >
-            {progression.equippedPower.icon} {progression.chariotCharges}
-          </button>
-        </div>
-        <Btn variant="green" size="xl" onClick={() => playMode(mode)} testId="btn-play" sfx={null} className="lobby-tap">
-          TOQUE PARA JOGAR
+        <Btn variant="green" size="xl" onClick={() => playMode(run)} testId="btn-play" sfx={null} className="lobby-tap">
+          JOGAR ▶
         </Btn>
       </div>
 
@@ -170,16 +151,16 @@ function DailyCard() {
   const all = d.story && d.challenge_done && d.run;
   const [reward, setReward] = useState<{ coins: number; talents: number } | null>(null);
   const steps = [
-    { done: d.story, icon: 'journey' as const, label: 'História', sub: story.title, go: () => UIManager.startStoryRun(story), testId: 'daily-story' },
-    { done: d.challenge_done, icon: mode.icon, label: 'Desafio', sub: mode.name, go: () => playMode(mode), testId: 'daily-challenge' },
-    { done: d.run, icon: run.icon, label: 'Corrida', sub: '150 m', go: () => playMode(run), testId: 'daily-run' },
+    { done: d.story, icon: 'journey' as const, label: 'História', short: 'Ouvir', sub: story.title, go: () => UIManager.startStoryRun(story), testId: 'daily-story' },
+    { done: d.challenge_done, icon: mode.icon, label: 'Desafio', short: 'Jogar', sub: mode.name, go: () => playMode(mode), testId: 'daily-challenge' },
+    { done: d.run, icon: run.icon, label: 'Corrida', short: 'Correr', sub: 'uma corridinha', go: () => playMode(run), testId: 'daily-run' },
   ];
   const next = steps.find((s) => !s.done);
   return (
     <div className="daily daily-compact daily-in-sheet">
       <div className="daily-row">
         <span className="daily-title">
-          <Icon name="star" size={14} tone="#ffd23f" stroke="#ffd23f" /> Jornada do Dia
+          <Icon name="star" size={14} tone="#ffd23f" stroke="#ffd23f" /> Aventura do Dia
         </span>
         <span className="daily-next">{next ? `${next.label}: ${next.sub}` : all && !d.chest ? 'Abra o baú!' : 'Completa ✔'}</span>
         <span className="daily-streak" data-testid="daily-streak">
@@ -187,10 +168,10 @@ function DailyCard() {
         </span>
       </div>
       <div className="daily-steps">
-        {steps.map((s, i) => (
+        {steps.map((s) => (
           <button key={s.label} type="button" className={`daily-step ${s.done ? 'done' : ''} ${next === s ? 'next' : ''}`} data-testid={s.testId} title={`${s.label}: ${s.sub}`} onClick={() => (s.done ? undefined : s.go())}>
             <span className="daily-step-icon">{s.done ? <Icon name="check" size={18} stroke="#fff" tone="none" /> : <Icon name={s.icon} size={18} />}</span>
-            <small>{i + 1}</small>
+            <small>{s.short}</small>
           </button>
         ))}
         <button
@@ -215,7 +196,7 @@ function DailyCard() {
             <Treasure kind="bau" size={100} />
             <h2 className="sign-title">Baú do Dia!</h2>
             <p>
-              Você completou a Jornada do Dia e ganhou {reward.coins} denários{reward.talents ? ` e ${reward.talents} talento` : ''}. Volte amanhã para manter a sequência!
+              Você completou a Aventura do Dia e ganhou {reward.coins} denários{reward.talents ? ` e ${reward.talents} talento` : ''}. Volte amanhã para manter a sequência!
             </p>
             <Btn variant="green" onClick={() => setReward(null)}>
               Oba! ✔

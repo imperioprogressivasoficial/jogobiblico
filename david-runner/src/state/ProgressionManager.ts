@@ -392,7 +392,7 @@ export class ProgressionManager {
     if (dl.story && dl.challenge_done && dl.run && dl.lastDone !== dl.day) {
       dl.streak = dl.lastDone === yesterday() ? dl.streak + 1 : 1;
       dl.lastDone = dl.day;
-      this.pushToast('🎁', 'Jornada do Dia completa!', `Sequência de ${dl.streak} ${dl.streak === 1 ? 'dia' : 'dias'}. Abra o Baú do Dia no início!`);
+      this.pushToast('🎁', 'Aventura do Dia completa!', `Sequência de ${dl.streak} ${dl.streak === 1 ? 'dia' : 'dias'}. Abra o Baú do Dia no início!`);
     }
   }
 
@@ -476,7 +476,7 @@ export class ProgressionManager {
       m.multiplierLevel = Math.min(MAX_MULTIPLIER - 1, m.multiplierLevel + 1);
       this.data.stats.missionSets++;
       this.data.relics += 1;
-      this.pushToast('✖️', 'Multiplicador aumentado!', `Agora sua pontuação é x${this.baseMultiplier}. Você ganhou 1 talento!`);
+      this.pushToast('⭐', 'Você ficou mais forte!', `Agora cada corrida vale ${this.baseMultiplier} vezes mais pontos. E ganhou 1 talento!`);
     }
     this.checkAchievements();
     this.commit();

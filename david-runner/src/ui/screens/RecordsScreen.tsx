@@ -71,7 +71,7 @@ export function RecordsScreen() {
         <div className="totals">
           <div>Corridas<strong>{fmt(st.totalRuns)}</strong></div>
           <div>Distância total<strong>{fmt(st.totalDistance)} m</strong></div>
-          <div>Denários coletadas<strong>{fmt(st.totalCoins)}</strong></div>
+          <div>Denários coletados<strong>{fmt(st.totalCoins)}</strong></div>
           <div>Pulos<strong>{fmt(st.totalJumps)}</strong></div>
           <div>Deslizes<strong>{fmt(st.totalSlides)}</strong></div>
           <div>Pergaminhos<strong>{fmt(st.totalScrolls)}</strong></div>

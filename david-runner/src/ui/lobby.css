@@ -1935,7 +1935,7 @@
   border-radius: 20px;
   padding: 10px;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
   box-shadow: 0 6px 0 var(--outline);
   animation: caption-in 0.3s cubic-bezier(0.2, 1.4, 0.5, 1);
@@ -2320,4 +2320,14 @@ button.webgl-error {
   display: grid;
   gap: 14px;
   align-content: start;
+}
+
+/* Painel dos Pais: primeira configuração */
+.pp-setup {
+  display: grid;
+  gap: 10px;
+}
+.shop-sub {
+  margin: 16px 4px 8px;
+  color: #fff;
 }

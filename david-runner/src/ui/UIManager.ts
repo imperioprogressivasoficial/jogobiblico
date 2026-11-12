@@ -30,7 +30,7 @@ export type Screen =
   | 'parents'
   | 'world';
 
-export type ShopTab = 'destaque' | 'herois' | 'trajes' | 'melhorias' | 'poderes';
+export type ShopTab = 'destaque' | 'herois' | 'trajes' | 'poderes';
 
 /** Navegação entre telas + acesso ao motor 3D compartilhado. */
 class UIManagerImpl {

@@ -40,6 +40,7 @@ function Panel() {
     <div className="screen list-screen parents" data-testid="parents-screen">
       <TopBar title="Painel dos Pais" />
       <div className="scroll-area">
+        {!p?.pin && <ParentSetup />}
         <section className="pp-card pp-today">
           <header>
             <Icon name="star" size={18} tone="#ffd23f" stroke="#ffd23f" />
@@ -56,7 +57,7 @@ function Panel() {
               <Icon name={dl.challenge_done ? 'check' : mode.icon} size={18} /> Desafio: <b>{mode.name}</b>
             </li>
             <li className={dl.run ? 'on' : ''}>
-              <Icon name={dl.run ? 'check' : 'run'} size={18} /> Corrida de 150 m
+              <Icon name={dl.run ? 'check' : 'run'} size={18} /> Corrida curta (150 m)
             </li>
           </ul>
           <div className="pp-streak">
@@ -141,5 +142,45 @@ function Panel() {
         </section>
       </div>
     </div>
+  );
+}
+
+/** Primeira vez no painel: o responsável cria o PIN, informa o e-mail e aceita os termos. */
+function ParentSetup() {
+  const [email, setEmail] = useState('');
+  const [pin, setPin] = useState('');
+  const [pin2, setPin2] = useState('');
+  const [consent, setConsent] = useState(false);
+  const ok = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim()) && /^\d{4}$/.test(pin) && pin === pin2 && consent;
+  return (
+    <section className="pp-card pp-setup" data-testid="pp-setup">
+      <header>
+        <Icon name="family" size={18} />
+        <strong>Configure a área dos pais</strong>
+      </header>
+      <p className="muted small">Crie um PIN de 4 números. Ele protege este painel e a ativação do jogo completo.</p>
+      <label className="ob-label">
+        E-mail do responsável
+        <input className="ob-input" data-testid="pp-email" type="email" inputMode="email" autoComplete="email" placeholder="nome@email.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+      </label>
+      <div className="ob-row">
+        <label className="ob-label">
+          PIN
+          <input className="ob-input ob-pin" data-testid="pp-pin" type="password" inputMode="numeric" maxLength={4} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))} />
+        </label>
+        <label className="ob-label">
+          Repita o PIN
+          <input className="ob-input ob-pin" data-testid="pp-pin2" type="password" inputMode="numeric" maxLength={4} value={pin2} onChange={(e) => setPin2(e.target.value.replace(/\D/g, ''))} />
+        </label>
+      </div>
+      {pin2.length === 4 && pin !== pin2 && <div className="pg-err">Os PINs não são iguais.</div>}
+      <label className="ob-consent">
+        <input type="checkbox" data-testid="pp-consent" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+        <span>Sou o responsável e aceito os Termos de Uso e a Política de Privacidade. Os dados ficam guardados neste aparelho.</span>
+      </label>
+      <Btn variant="green" disabled={!ok} testId="pp-save" onClick={() => progression.updateProfile({ parentEmail: email.trim().toLowerCase(), pin, consent: true })}>
+        Salvar ✔
+      </Btn>
+    </section>
   );
 }

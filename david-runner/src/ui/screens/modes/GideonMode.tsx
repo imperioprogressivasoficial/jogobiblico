@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { audio } from '../../../game/AudioManager';
 import { vibrate } from '../../../platform/native';
+import { progression } from '../../../state/ProgressionManager';
 import { ModeFinish, ModeHeader } from './ModeFinish';
 
 /**
@@ -39,7 +40,9 @@ const good = (army: number): Op => {
   if (army < 120 && r < 0.35) return { kind: 'x', n: army < 40 ? 3 : 2 };
   return { kind: '+', n: [5, 10, 15, 20, 30][Math.floor(Math.random() * 5)] };
 };
-const bad = (army: number): Op => (army > 20 && Math.random() < 0.4 ? { kind: '/', n: 2 } : { kind: '-', n: [5, 10, 15][Math.floor(Math.random() * 3)] });
+/** Portão ruim. No modo Criança (padrão) não tem divisão: só tirar soldados. */
+const bad = (army: number): Op => (army > 20 && !kidMode() && Math.random() < 0.4 ? { kind: '/', n: 2 } : { kind: '-', n: [5, 10][Math.floor(Math.random() * 2)] });
+const kidMode = () => progression.data.settings.difficulty === 'crianca';
 
 /** Um portão bom e um ruim (às vezes dois bons: a criança precisa calcular qual é maior). */
 export function makeGate(army: number): [Op, Op] {
@@ -95,7 +98,8 @@ export function GideonMode() {
     const finish = () => {
       if (finished) return;
       finished = true;
-      const score = peak * 5 + bonus + taps * 20;
+      // a lição é que Deus vence com poucos: juntar mais de 300 não dá mais pontos
+      const score = Math.min(peak, 300) * 3 + bonus + taps * 20;
       setOver({ score, peak, taps });
     };
 
@@ -376,7 +380,7 @@ export function GideonMode() {
           mode="gideao"
           score={over.score}
           coins={Math.round(over.score / 12)}
-          line={`Você juntou até ${over.peak} soldados e tocou ${over.taps} trombetas. Com só 300, Deus deu a vitória!`}
+          line={`Você tocou ${over.taps} trombetas! Gideão tinha só 300 soldados, e Deus deu a vitória.`}
           onAgain={() => {
             setOver(null);
             setHud({ army: START, time: GATHER_S, phase: 'gather', taps: 0 });

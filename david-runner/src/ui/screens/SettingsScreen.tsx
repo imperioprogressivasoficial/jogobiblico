@@ -43,16 +43,16 @@ export function SettingsScreen() {
             <div className="setting-row">
               <span>Jogador</span>
               <span className="setting-val">
-                {progression.data.profile.childName}, {progression.data.profile.age} anos
+                {progression.data.profile.childName}{progression.data.profile.age ? `, ${progression.data.profile.age} anos` : ''}
               </span>
             </div>
             <div className="setting-row">
               <span>Responsável</span>
-              <span className="setting-val">{progression.data.profile.parentEmail}</span>
+              <span className="setting-val">{progression.data.profile.parentEmail || 'Configure no Painel dos Pais'}</span>
             </div>
             <div className="setting-row">
               <span>Área dos pais protegida por PIN</span>
-              <span className="setting-val">✔ Ativo</span>
+              <span className="setting-val">{progression.data.profile.pin ? '✔ Ativo' : 'Ainda não'}</span>
             </div>
             <Btn variant="blue" size="sm" onClick={() => UIManager.go('parents')} testId="btn-parents">
               👨‍👩‍👧 Painel dos Pais

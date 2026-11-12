@@ -35,6 +35,7 @@ const RUN = (seed, extra = {}) => ({
 
   // ---------------------------------------------------------------- Jornada
   const total = null;
+  await page.click('[data-testid=btn-more]');
   await page.click('[data-testid=btn-journey]');
   await page.waitForSelector('[data-testid=journey-screen]');
   let count = await page.textContent('[data-testid=journey-count]');
@@ -89,6 +90,7 @@ const RUN = (seed, extra = {}) => ({
   // segunda vez: sem moedas
   await page.click('[data-testid=btn-menu]', { force: true });
   await page.waitForSelector('[data-testid=main-menu]');
+  await page.click('[data-testid=btn-more]');
   await page.click('[data-testid=btn-journey]');
   await page.click('[data-testid=story-criacao]');
   await page.waitForSelector('[data-testid=story-reader]');

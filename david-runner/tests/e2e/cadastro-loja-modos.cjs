@@ -14,17 +14,23 @@ const O = process.argv[2] || require('os').tmpdir();
   await shot('01-ob');
   await p.click('[data-testid=ob-next]');
   await p.fill('[data-testid=ob-name]', 'Tássia'); await p.click('[data-testid=ob-next]');
-  await p.click('[data-testid=ob-age-7]'); await p.click('[data-testid=ob-next]');
   await p.click('[data-testid=ob-gender-f]'); await p.click('[data-testid=ob-next]'); await p.click('[data-testid=ob-hero-ester]'); await shot('02-heroes'); await p.click('[data-testid=ob-next]');
-  await p.fill('[data-testid=ob-email]', 'pai@exemplo.com'); await p.fill('[data-testid=ob-pin]', '1234'); await p.fill('[data-testid=ob-pin2]', '1234'); await p.check('[data-testid=ob-consent]');
-  await shot('03-parents'); await p.click('[data-testid=ob-next]');
   await shot('04-done'); await p.click('[data-testid=ob-next]');
   await p.waitForSelector('[data-testid=main-menu]'); await p.waitForTimeout(1500); await shot('05-lobby');
+  // cadastro curto: o adulto configura e-mail e PIN depois, no Painel dos Pais (a conta respondendo a uma conta de vezes)
+  await p.click('[data-testid=btn-more]'); await p.click('[data-testid=btn-parents-menu]');
+  const ask = await p.textContent('.pg-ask'); const [, x, y] = ask.match(/(\d+) × (\d+)/);
+  for (const k of String(Number(x) * Number(y))) await p.click(`[data-testid=pg-key-${k}]`);
+  await p.waitForSelector('[data-testid=pp-setup]'); await shot('03-parents');
+  await p.fill('[data-testid=pp-email]', 'pai@exemplo.com'); await p.fill('[data-testid=pp-pin]', '1234'); await p.fill('[data-testid=pp-pin2]', '1234'); await p.check('[data-testid=pp-consent]');
+  await p.click('[data-testid=pp-save]'); await p.waitForSelector('[data-testid=pp-setup]', { state: 'detached' });
+  if ((await p.evaluate(() => window.__davidRunner.progression.data.profile.pin)) !== '1234') throw new Error('PIN do responsável não salvo');
+  await p.click('[data-testid=back]'); await p.waitForSelector('[data-testid=main-menu]');
   await p.click('[data-testid=btn-shop]'); await p.waitForSelector('[data-testid=shop-featured]'); await shot('06-shop');
   if (await p.$('[data-testid=tab-moedas]')) throw new Error('a loja não pode vender denários com dinheiro');
   await p.$eval('[data-testid=tab-destaque]', (e) => e.click()); await p.click('[data-testid=feat-coins-info]'); await p.waitForSelector('[data-testid=coins-info]'); await shot('09-coins');
   await p.click('[data-testid=back]'); await p.click('[data-testid=back]');
-  await p.click('[data-testid=btn-modes]'); await p.waitForSelector('[data-testid=modes-screen]'); await shot('10-modes');
+  await p.click('[data-testid=btn-more]'); await p.click('[data-testid=btn-modes]'); await p.waitForSelector('[data-testid=modes-screen]'); await shot('10-modes');
   // versão grátis: um modo que não é o desafio do dia pede o jogo completo
   const daily = await p.evaluate(() => window.__davidRunner.progression.data.daily.challenge);
   const locked = ['quiz', 'memoria', 'versiculo', 'funda', 'gideao'].find((m) => m !== daily);

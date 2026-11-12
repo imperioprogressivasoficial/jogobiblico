@@ -33,6 +33,7 @@ async function enter(page) {
   };
   if (want('menu')) await shot('01-menu', 1500);
   if (want('herois')) {
+    await page.click('[data-testid=btn-more]');
     await page.click('[data-testid=btn-characters]');
     for (let i = 0; i < 6; i++) {
       await shot(`02-heroi-${i}`, 1100);

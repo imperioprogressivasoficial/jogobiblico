@@ -34,7 +34,7 @@ export function JourneyScreen() {
 
   return (
     <div className="screen list-screen journey" data-testid="journey-screen">
-      <TopBar title="Jornada Bíblica" />
+      <TopBar title="Histórias da Bíblia" />
       <div className="scroll-area">
         <div className="journey-head">
           <div className="journey-count" data-testid="journey-count">

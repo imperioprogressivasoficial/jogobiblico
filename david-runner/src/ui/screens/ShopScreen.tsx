@@ -11,7 +11,7 @@ import { Btn, CoinIcon, Progress, RelicIcon, TopBar } from '../components/common
 import { UIManager, fmt, useProgress, type ShopTab } from '../UIManager';
 
 type Tab = ShopTab;
-const TAB_ICON: Record<ShopTab, IconName> = { destaque: 'star', herois: 'heroes', trajes: 'shop', poderes: 'fire', melhorias: 'bolt' };
+const TAB_ICON: Record<ShopTab, IconName> = { destaque: 'star', herois: 'heroes', trajes: 'shop', poderes: 'fire' };
 
 export function ShopScreen() {
   useProgress();
@@ -29,7 +29,6 @@ export function ShopScreen() {
             ['herois', 'Heróis'],
             ['trajes', 'Roupas'],
             ['poderes', 'Poderes'],
-            ['melhorias', 'Melhorias'],
           ] as [Tab, string][]
         ).map(([id, label]) => (
           <button
@@ -133,48 +132,59 @@ export function ShopScreen() {
           </div>
         )}
 
-        {tab === 'poderes' && <PowersTab />}
-
-        {tab === 'melhorias' && (
-          <div className="shop-list">
-            {UPGRADES.map((u) => {
-              const lvl = d.upgrades[u.id] ?? 0;
-              const cost = progression.upgradeCost(u.id);
-              const dur = u.baseDuration + u.perLevel * lvl;
-              return (
-                <div key={u.id} className="shop-item">
-                  <div className="shop-avatar emoji">{u.icon}</div>
-                  <div className="shop-info">
-                    <strong>{u.name}</strong>
-                    <small>
-                      {u.description} Duração: {dur.toLocaleString('pt-BR')} s
-                    </small>
-                    <div className="pips">
-                      {u.costs.map((_, i) => (
-                        <span key={i} className={`pip ${i < lvl ? 'on' : ''}`} />
-                      ))}
-                    </div>
-                  </div>
-                  {cost === null ? (
-                    <span className="owned">Máximo</span>
-                  ) : (
-                    <Btn
-                      variant="gold"
-                      size="sm"
-                      sfx={null}
-                      disabled={d.coins < cost}
-                      testId={`upgrade-${u.id}`}
-                      onClick={() => audio.play(progression.buyUpgrade(u.id) ? 'buy' : 'error')}
-                    >
-                      <CoinIcon size={16} /> {fmt(cost)}
-                    </Btn>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+        {tab === 'poderes' && (
+          <>
+            <PowersTab />
+            <h3 className="section-title shop-sub">Itens da corrida</h3>
+            <UpgradesList />
+          </>
         )}
+
       </div>
+    </div>
+  );
+}
+
+/** Itens que aparecem na pista (ímã, harpa, escudo): melhorar faz durarem mais. Fica junto dos Poderes. */
+function UpgradesList() {
+  const d = progression.data;
+  return (
+    <div className="shop-list">
+      {UPGRADES.map((u) => {
+        const lvl = d.upgrades[u.id] ?? 0;
+        const cost = progression.upgradeCost(u.id);
+        const dur = u.baseDuration + u.perLevel * lvl;
+        return (
+          <div key={u.id} className="shop-item">
+            <div className="shop-avatar emoji">{u.icon}</div>
+            <div className="shop-info">
+              <strong>{u.name}</strong>
+              <small>
+                {u.description} Duração: {dur.toLocaleString('pt-BR')} s
+              </small>
+              <div className="pips">
+                {u.costs.map((_, i) => (
+                  <span key={i} className={`pip ${i < lvl ? 'on' : ''}`} />
+                ))}
+              </div>
+            </div>
+            {cost === null ? (
+              <span className="owned">Máximo</span>
+            ) : (
+              <Btn
+                variant="gold"
+                size="sm"
+                sfx={null}
+                disabled={d.coins < cost}
+                testId={`upgrade-${u.id}`}
+                onClick={() => audio.play(progression.buyUpgrade(u.id) ? 'buy' : 'error')}
+              >
+                <CoinIcon size={16} /> {fmt(cost)}
+              </Btn>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

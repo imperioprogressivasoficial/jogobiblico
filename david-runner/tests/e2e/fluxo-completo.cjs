@@ -82,7 +82,7 @@ const assert = (c, m) => { if (!c) { console.log('FALHOU: ' + m); process.exitCo
   await page.click('[data-testid=btn-shop]');
   await page.$eval('[data-testid=tab-herois]', (e) => e.click());
   await page.click('[data-testid=buy-moises]');
-  await page.$eval('[data-testid=tab-melhorias]', (e) => e.click());
+  await page.$eval('[data-testid=tab-poderes]', (e) => e.click());
   await page.click('[data-testid=upgrade-magnet]');
   let p = await page.evaluate(() => { const d = window.__davidRunner.progression.data; return { chars: d.characters, mag: d.upgrades.magnet, coins: d.coins, sel: d.selectedCharacter }; });
   assert(p.chars.includes('moises') && p.mag === 1 && p.coins === 5000 - 2500 + 300 - 400 && p.sel === 'moises', 'compra de herói e melhoria debitam moedas (+300 da conquista Novo Herói)');
@@ -112,6 +112,7 @@ const assert = (c, m) => { if (!c) { console.log('FALHOU: ' + m); process.exitCo
   assert(p.s === 'alta' && p.th === 16 && p.chars.includes('moises') && p.map === 'deserto', 'progresso e configurações salvos localmente');
   // 10) correr com Moisés no Deserto
   await page.click('[data-testid=splash]');
+  await page.click('[data-testid=btn-more]');
   await page.click('[data-testid=btn-characters]');
   assert((await page.textContent('[data-testid=char-name]')).includes('Moisés'), 'carrossel mostra Moisés');
   if (await page.$('[data-testid=btn-select-char]')) await page.click('[data-testid=btn-select-char]');
