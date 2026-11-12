@@ -32,10 +32,10 @@ export function MissionsScreen() {
         <div className="mult-card">
           <div className="mult-big">x{progression.baseMultiplier}</div>
           <div>
-            <strong>Multiplicador de pontuação</strong>
+            <strong>Fique mais forte!</strong>
             <p>
-              Complete e resgate as 3 missões do dia para aumentar o multiplicador em +1 e ganhar 1 <RelicIcon size={14} /> talento.
-              Cada missão resgatada também dá <strong>+1 carga de {progression.equippedPower.icon} {progression.equippedPower.name}</strong> (o poder equipado).
+              Faça as 3 missões do dia: cada corrida passa a valer mais pontos e você ganha 1 <RelicIcon size={14} /> talento.
+              Cada missão também dá <strong>+1 {progression.equippedPower.icon} {progression.equippedPower.name}</strong>.
             </p>
             <small className="muted">Novas missões em {timeToMidnight()}</small>
           </div>
