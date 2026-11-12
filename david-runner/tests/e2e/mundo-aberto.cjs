@@ -10,6 +10,7 @@ const ok = (c, m) => { console.log((c ? 'ok  ' : 'FALHOU: ') + m); if (!c) fail+
 
 async function player(b, name, avatar) {
   const p = await (await b.newContext({ ...devices['iPhone 13'] })).newPage();
+  p.setDefaultTimeout(120000); // dois WebGL em software (SwiftShader) deixam a 2ª página bem lenta
   p.errs = [];
   p.on('pageerror', (e) => p.errs.push(e.message));
   await p.addInitScript(([n, a]) => localStorage.setItem('davidrunner.save.v1', JSON.stringify({ selectedCharacter: a, characters: [a], profile: { childName: n, age: 7, gender: 'm', avatar: a, parentEmail: 'x@y.com', pin: '1234', consent: true, createdAt: '' }, tutorialDone: true, settings: { showHints: false } })), [name, avatar]);
@@ -37,7 +38,7 @@ async function player(b, name, avatar) {
     // andar muda a posição
     const x0 = await a.evaluate(() => window.__davidRunner.engine.world.state().z);
     await a.evaluate(() => window.__davidRunner.engine.world.setMove(0, 1));
-    await a.waitForTimeout(1500);
+    await a.waitForTimeout(3000);
     await a.evaluate(() => window.__davidRunner.engine.world.setMove(0, 0));
     const x1 = await a.evaluate(() => window.__davidRunner.engine.world.state().z);
     ok(x0 - x1 > 0.5, `joystick move o herói para a frente (${x0.toFixed(1)} -> ${x1.toFixed(1)})`);
